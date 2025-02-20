@@ -2,7 +2,7 @@
 from logilab.common.registry import yes, RegistrableObject, RegistrableInstance
 
 
-class Proxy(object):
+class Proxy:
     """annoying object should that not be registered, nor cause error"""
 
     def __getattr__(self, attr):
@@ -15,11 +15,13 @@ trap = Proxy()
 class AppObjectClass(RegistrableObject):
     __registry__ = "zereg"
     __regid__ = "appobject1"
+    __module__ = "regobjects"
     __select__ = yes()
 
 
 class AppObjectInstance(RegistrableInstance):
     __registry__ = "zereg"
+    __module__ = "regobjects"
     __select__ = yes()
 
     def __init__(self, regid):

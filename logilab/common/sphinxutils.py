@@ -35,7 +35,7 @@ import inspect
 
 from logilab.common import STD_BLACKLIST
 from logilab.common.shellutils import globfind
-from logilab.common.modutils import load_module_from_file, modpath_from_file
+from logilab.common.modutils import modpath_from_file
 
 
 def module_members(module):
@@ -80,7 +80,7 @@ class ModuleGenerator:
         """make the module file"""
         self.fn = open(dest_file, "w")
         num = len(self.title) + 6
-        title = "=" * num + "\n %s API\n" % self.title + "=" * num
+        title = "=" * num + f"\n {self.title} API\n" + "=" * num
         self.fn.write(self.file_header % title)
         self.gen_modules(exclude_dirs=exclude_dirs)
         self.fn.close()
@@ -111,11 +111,9 @@ class ModuleGenerator:
         for filepath in globfind(self.code_dir, "*.py", exclude_dirs):
             if osp.basename(filepath) in ("setup.py", "__pkginfo__.py"):
                 continue
-            try:
-                module = load_module_from_file(filepath)
-            except Exception:  # module might be broken or magic
-                dotted_path = modpath_from_file(filepath)
-                module = type(".".join(dotted_path), (), {})  # mock it
+
+            dotted_path = modpath_from_file(filepath)
+            module = type(".".join(dotted_path), (), {})  # mock it
             yield module
 
 

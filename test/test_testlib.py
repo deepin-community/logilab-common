@@ -17,10 +17,10 @@
 # with logilab-common.  If not, see <http://www.gnu.org/licenses/>.
 """unittest module for logilab.comon.testlib"""
 
-from __future__ import print_function
 
 import os
 import sys
+from io import StringIO
 from os.path import join, dirname, isdir, isfile, abspath, exists
 import tempfile
 import shutil
@@ -30,7 +30,6 @@ try:
 except NameError:
     __file__ = sys.argv[0]
 
-from logilab.common.compat import StringIO
 from logilab.common.testlib import (
     TestSuite,
     unittest_main,
@@ -39,12 +38,11 @@ from logilab.common.testlib import (
     mock_object,
     create_files,
     InnerTest,
-    with_tempdir,
     tag,
     require_version,
     require_module,
 )
-from logilab.common.pytest import SkipAwareTextTestRunner, NonStrictTestLoader
+from logilab.common.testlib import SkipAwareTextTestRunner, NonStrictTestLoader
 
 
 class MockTestCase(TestCase):
@@ -303,7 +301,7 @@ class GenerativeTestsTC(TestCase):
 
             def test_generative(self):
                 for i in range(10):
-                    yield InnerTest("check_%s" % i, self.check, i)
+                    yield InnerTest(f"check_{i}", self.check, i)
 
         result = self.runner.run(FooTC("test_generative"))
         self.assertEqual(result.testsRun, 10)
@@ -321,7 +319,7 @@ class GenerativeTestsTC(TestCase):
 
             def test_generative(self):
                 for i in range(10):
-                    yield InnerTest("check_%s" % i, self.check, i)
+                    yield InnerTest(f"check_{i}", self.check, i)
 
         result = self.runner.run(FooTC("test_generative"))
         self.assertEqual(result.testsRun, 10)
@@ -339,7 +337,7 @@ class GenerativeTestsTC(TestCase):
 
             def test_generative(self):
                 for i in range(10):
-                    yield InnerTest("check_%s" % i, self.check, i)
+                    yield InnerTest(f"check_{i}", self.check, i)
 
         result = self.runner.run(FooTC("test_generative"))
         self.assertEqual(result.testsRun, 10)
@@ -357,7 +355,7 @@ class GenerativeTestsTC(TestCase):
 
             def test_generative(self):
                 for i in range(10):
-                    yield InnerTest("check_%s" % i, self.check, i)
+                    yield InnerTest(f"check_{i}", self.check, i)
 
         result = self.runner.run(FooTC("test_generative"))
         self.assertEqual(result.testsRun, 10)
@@ -502,7 +500,7 @@ class TestLoaderTC(TestCase):
             ("FooTC.whatever", 0),
         ]
         for pattern, expected_count in data:
-            yield self.assertRunCount, pattern, self.module, expected_count
+            self.assertRunCount(pattern, self.module, expected_count)
 
     def test_collect_with_pattern(self):
         data = [
@@ -517,7 +515,7 @@ class TestLoaderTC(TestCase):
             ("ab", 0),
         ]
         for pattern, expected_count in data:
-            yield self.assertRunCount, pattern, self.module, expected_count
+            self.assertRunCount(pattern, self.module, expected_count)
 
     def test_testcase_with_custom_metaclass(self):
         class mymetaclass(type):
@@ -554,7 +552,7 @@ class TestLoaderTC(TestCase):
             ("MyTestCase.whatever", 0),
         ]
         for pattern, expected_count in data:
-            yield self.assertRunCount, pattern, MyMod, expected_count
+            self.assertRunCount(pattern, MyMod, expected_count)
 
     def test_collect_everything_and_skipped_patterns(self):
         testdata = [
@@ -563,7 +561,7 @@ class TestLoaderTC(TestCase):
             (["foo", "bar"], 0),
         ]
         for skipped, expected_count in testdata:
-            yield self.assertRunCount, None, self.module, expected_count, skipped
+            self.assertRunCount(None, self.module, expected_count, skipped)
 
     def test_collect_specific_pattern_and_skip_some(self):
         testdata = [
@@ -572,7 +570,7 @@ class TestLoaderTC(TestCase):
             ("bar", ["bar"], 0),
         ]
         for runpattern, skipped, expected_count in testdata:
-            yield self.assertRunCount, runpattern, self.module, expected_count, skipped
+            self.assertRunCount(runpattern, self.module, expected_count, skipped)
 
     def test_skip_classname(self):
         testdata = [
@@ -580,7 +578,7 @@ class TestLoaderTC(TestCase):
             (["FooTC"], 1),
         ]
         for skipped, expected_count in testdata:
-            yield self.assertRunCount, None, self.module, expected_count, skipped
+            self.assertRunCount(None, self.module, expected_count, skipped)
 
     def test_skip_classname_and_specific_collect(self):
         testdata = [
@@ -588,7 +586,7 @@ class TestLoaderTC(TestCase):
             ("foo", ["FooTC"], 0),
         ]
         for runpattern, skipped, expected_count in testdata:
-            yield self.assertRunCount, runpattern, self.module, expected_count, skipped
+            self.assertRunCount(runpattern, self.module, expected_count, skipped)
 
     def test_nonregr_dotted_path(self):
         self.assertRunCount("FooTC.test_foo", self.module, 2)
@@ -616,7 +614,7 @@ class TestLoaderTC(TestCase):
             ("odd", 0),
         ]
         for pattern, expected_count in data:
-            yield self.assertRunCount, pattern, MyMod, expected_count
+            self.assertRunCount(pattern, MyMod, expected_count)
 
     def test_nonregr_class_skipped_option(self):
         class MyMod:
@@ -650,73 +648,6 @@ class TestLoaderTC(TestCase):
 
 
 class DecoratorTC(TestCase):
-    @with_tempdir
-    def test_tmp_dir_normal_1(self):
-        tempdir = tempfile.gettempdir()
-        # assert temp directory is empty
-        self.assertListEqual(list(os.walk(tempdir)), [(tempdir, [], [])])
-
-        witness = []
-
-        @with_tempdir
-        def createfile(list):
-            fd1, fn1 = tempfile.mkstemp()
-            fd2, fn2 = tempfile.mkstemp()
-            dir = tempfile.mkdtemp()
-            fd3, fn3 = tempfile.mkstemp(dir=dir)
-            tempfile.mkdtemp()
-            list.append(True)
-            for fd in (fd1, fd2, fd3):
-                os.close(fd)
-
-        self.assertFalse(witness)
-        createfile(witness)
-        self.assertTrue(witness)
-
-        self.assertEqual(tempfile.gettempdir(), tempdir)
-
-        # assert temp directory is empty
-        self.assertListEqual(list(os.walk(tempdir)), [(tempdir, [], [])])
-
-    @with_tempdir
-    def test_tmp_dir_normal_2(self):
-        tempdir = tempfile.gettempdir()
-        # assert temp directory is empty
-        self.assertListEqual(list(os.walk(tempfile.tempdir)), [(tempfile.tempdir, [], [])])
-
-        class WitnessException(Exception):
-            pass
-
-        @with_tempdir
-        def createfile():
-            fd1, fn1 = tempfile.mkstemp()
-            fd2, fn2 = tempfile.mkstemp()
-            dir = tempfile.mkdtemp()
-            fd3, fn3 = tempfile.mkstemp(dir=dir)
-            tempfile.mkdtemp()
-            for fd in (fd1, fd2, fd3):
-                os.close(fd)
-            raise WitnessException()
-
-        self.assertRaises(WitnessException, createfile)
-
-        # assert tempdir didn't change
-        self.assertEqual(tempfile.gettempdir(), tempdir)
-
-        # assert temp directory is empty
-        self.assertListEqual(list(os.walk(tempdir)), [(tempdir, [], [])])
-
-    def test_tmpdir_generator(self):
-        orig_tempdir = tempfile.gettempdir()
-
-        @with_tempdir
-        def gen():
-            yield tempfile.gettempdir()
-
-        for tempdir in gen():
-            self.assertNotEqual(orig_tempdir, tempdir)
-        self.assertEqual(orig_tempdir, tempfile.gettempdir())
-
     def setUp(self):
         self.pyversion = sys.version_info
 
@@ -844,7 +775,7 @@ class TagTC(TestCase):
 
         self.assertEqual(bob(2, 3, 7), 35)
         self.assertTrue(hasattr(bob, "tags"))
-        self.assertSetEqual(bob.tags, set(["testing", "bob"]))
+        self.assertSetEqual(bob.tags, {"testing", "bob"})
 
     def test_tags_class(self):
         tags = self.func.tags
@@ -868,7 +799,7 @@ class TagTC(TestCase):
 
     def test_tagged_class(self):
         def options(tags):
-            class Options(object):
+            class Options:
                 tags_pattern = tags
 
             return Options()

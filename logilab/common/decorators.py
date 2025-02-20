@@ -17,7 +17,6 @@
 # with logilab-common.  If not, see <http://www.gnu.org/licenses/>.
 """ A few useful function/method decorators. """
 
-from __future__ import print_function
 
 __docformat__ = "restructuredtext en"
 
@@ -26,7 +25,7 @@ import sys
 
 from time import process_time, time
 from inspect import isgeneratorfunction
-from typing import Any, Optional, Callable, Union
+from typing import Any, Optional, Callable, overload, TypeVar
 
 from inspect import getfullargspec
 
@@ -35,15 +34,15 @@ from logilab.common.compat import method_type
 # XXX rewrite so we can use the decorator syntax when keyarg has to be specified
 
 
-class cached_decorator(object):
+class cached_decorator:
     def __init__(self, cacheattr: Optional[str] = None, keyarg: Optional[int] = None) -> None:
         self.cacheattr = cacheattr
         self.keyarg = keyarg
 
     def __call__(self, callableobj: Optional[Callable] = None) -> Callable:
-        assert not isgeneratorfunction(callableobj), (
-            "cannot cache generator function: %s" % callableobj
-        )
+        assert not isgeneratorfunction(
+            callableobj
+        ), f"cannot cache generator function: {callableobj}"
         assert callableobj is not None
         if len(getfullargspec(callableobj).args) == 1 or self.keyarg == 0:
             cache = _SingleValueCache(callableobj, self.cacheattr)
@@ -54,11 +53,11 @@ class cached_decorator(object):
         return cache.closure()
 
 
-class _SingleValueCache(object):
+class _SingleValueCache:
     def __init__(self, callableobj: Callable, cacheattr: Optional[str] = None) -> None:
         self.callable = callableobj
         if cacheattr is None:
-            self.cacheattr = "_%s_cache_" % callableobj.__name__
+            self.cacheattr = f"_{callableobj.__name__}_cache_"
         else:
             assert cacheattr != callableobj.__name__
             self.cacheattr = cacheattr
@@ -122,9 +121,22 @@ class _MultiValuesKeyArgCache(_MultiValuesCache):
             return _cache[key]
 
 
+_T = TypeVar("_T", bound=Callable)
+
+
+@overload
 def cached(
-    callableobj: Optional[Callable] = None, keyarg: Optional[int] = None, **kwargs: Any
-) -> Union[Callable, cached_decorator]:
+    callableobj: None = None, keyarg: Optional[int] = None, **kwargs: Any
+) -> Callable[[_T], _T]:
+    ...
+
+
+@overload
+def cached(callableobj: _T = None, keyarg: Optional[int] = None, **kwargs: Any) -> _T:
+    ...
+
+
+def cached(callableobj=None, keyarg=None, **kwargs):
     """Simple decorator to cache result of method call."""
     kwargs["keyarg"] = keyarg
     decorator = cached_decorator(**kwargs)
@@ -134,7 +146,7 @@ def cached(
         return decorator(callableobj)
 
 
-class cachedproperty(object):
+class cachedproperty:
     """Provides a cached property equivalent to the stacking of
     @cached and @property, but more efficient.
 
@@ -155,7 +167,7 @@ class cachedproperty(object):
         try:
             wrapped.__name__
         except AttributeError:
-            raise TypeError("%s must have a __name__ attribute" % wrapped)
+            raise TypeError(f"{wrapped} must have a __name__ attribute")
         self.wrapped = wrapped
 
     # otherwise this breaks sphinx static analysis for __doc__
@@ -203,14 +215,14 @@ def copy_cache(obj, funcname, cacheobj):
         pass
 
 
-class wproperty(object):
+class wproperty:
     """Simple descriptor expecting to take a modifier function as first argument
     and looking for a _<function name> to retrieve the attribute.
     """
 
     def __init__(self, setfunc):
         self.setfunc = setfunc
-        self.attrname = "_%s" % setfunc.__name__
+        self.attrname = f"_{setfunc.__name__}"
 
     def __set__(self, obj, value):
         self.setfunc(obj, value)
@@ -220,7 +232,7 @@ class wproperty(object):
         return getattr(obj, self.attrname)
 
 
-class classproperty(object):
+class classproperty:
     """this is a simple property-like class but for class attributes."""
 
     def __init__(self, get):
@@ -230,7 +242,7 @@ class classproperty(object):
         return self.get(cls)
 
 
-class iclassmethod(object):
+class iclassmethod:
     """Descriptor for method which should be available as class method if called
     on the class or instance method if called on an instance.
     """
@@ -252,7 +264,7 @@ def timed(f):
         t = time()
         c = process_time()
         res = f(*args, **kwargs)
-        print("%s clock: %.9f / time: %.9f" % (f.__name__, process_time() - c, time() - t))
+        print(f"{f.__name__} clock: {process_time() - c:.9f} / time: {time() - t:.9f}")
         return res
 
     return wrap

@@ -159,7 +159,7 @@ class UMessage:
         """return an unicode string containing all the message's headers"""
         values = []
         for header in self.message.keys():
-            values.append("%s: %s" % (header, self.get(header)))
+            values.append(f"{header}: {self.get(header)}")
         return "\n".join(values)
 
     def multi_addrs(self, header):

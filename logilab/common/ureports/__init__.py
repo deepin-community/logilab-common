@@ -26,7 +26,7 @@ import sys
 
 from typing import Any, Optional, Union, List as ListType, Generator, Tuple, Callable, TextIO
 
-from logilab.common.compat import StringIO
+from io import StringIO
 from logilab.common.textutils import linesep
 from logilab.common.tree import VNode
 from logilab.common.ureports.nodes import Table, Section, Link, Paragraph, Title, Text
@@ -78,7 +78,7 @@ def build_summary(layout, level=1):
     return summary
 
 
-class BaseWriter(object):
+class BaseWriter:
     """base class for ureport writers"""
 
     def format(
@@ -163,6 +163,7 @@ class BaseWriter(object):
 
         return an iterator on strings (one for each child element)
         """
+
         # use cells !
         def write(data: str) -> None:
             try:

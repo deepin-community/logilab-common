@@ -21,9 +21,8 @@
 """
 __docformat__ = "restructuredtext en"
 
-from setuptools import setup, find_packages
-from io import open
 from os import path
+from setuptools import setup, find_namespace_packages
 
 here = path.abspath(path.dirname(__file__))
 
@@ -46,7 +45,7 @@ setup(
     license=pkginfo["license"],
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=pkginfo["classifiers"],
-    packages=find_packages(exclude=["contrib", "docs", "test*"]),
+    packages=find_namespace_packages(include=["logilab"]),
     package_data={"logilab.common": ["py.typed"]},
     include_package_data=True,
     namespace_packages=[pkginfo["subpackage_of"]],

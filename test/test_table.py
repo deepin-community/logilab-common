@@ -22,7 +22,8 @@ Unittests for table management
 
 import sys
 
-from logilab.common.compat import StringIO
+from io import StringIO
+
 from logilab.common.testlib import TestCase, unittest_main
 from logilab.common.table import (
     Table,
@@ -356,8 +357,8 @@ class TableStyleTC(TestCase):
     def test_getset(self):
         """tests style's get and set methods"""
         for attrname, default_value in self._tested_attrs:
-            getter = getattr(self.style, "get_%s" % attrname)
-            setter = getattr(self.style, "set_%s" % attrname)
+            getter = getattr(self.style, f"get_{attrname}")
+            setter = getattr(self.style, f"set_{attrname}")
             self.assertRaises(KeyError, getter, "badcol")
             self.assertEqual(getter("col1"), default_value)
             setter("FOO", "col1")
@@ -366,10 +367,10 @@ class TableStyleTC(TestCase):
     def test_getset_index(self):
         """tests style's get and set by index methods"""
         for attrname, default_value in self._tested_attrs:
-            getter = getattr(self.style, "get_%s" % attrname)
-            getattr(self.style, "set_%s" % attrname)
-            igetter = getattr(self.style, "get_%s_by_index" % attrname)
-            isetter = getattr(self.style, "set_%s_by_index" % attrname)
+            getter = getattr(self.style, f"get_{attrname}")
+            getattr(self.style, f"set_{attrname}")
+            igetter = getattr(self.style, f"get_{attrname}_by_index")
+            isetter = getattr(self.style, f"set_{attrname}_by_index")
             self.assertEqual(getter("__row_column__"), default_value)
             isetter("FOO", 0)
             self.assertEqual(getter("__row_column__"), "FOO")

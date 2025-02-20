@@ -47,10 +47,10 @@ def make_tree(tuple):
 
 
 class Node_ClassTest(TestCase):
-    """ a basic tree node, caracterised by an id"""
+    """a basic tree node, caracterised by an id"""
 
     def setUp(self):
-        """ called before each test from this class """
+        """called before each test from this class"""
         self.o = make_tree(tree)
 
     def test_flatten(self):
@@ -192,10 +192,8 @@ class Node_ClassTest(TestCase):
 
 
 class post_order_list_FunctionTest(TestCase):
-    """"""
-
     def setUp(self):
-        """ called before each test from this class """
+        """called before each test from this class"""
         self.o = make_tree(tree)
 
     def test_known_values_post_order_list(self):
@@ -232,10 +230,8 @@ class post_order_list_FunctionTest(TestCase):
 
 
 class PostfixedDepthFirstIterator_ClassTest(TestCase):
-    """"""
-
     def setUp(self):
-        """ called before each test from this class """
+        """called before each test from this class"""
         self.o = make_tree(tree)
 
     def test_known_values_next(self):
@@ -250,10 +246,8 @@ class PostfixedDepthFirstIterator_ClassTest(TestCase):
 
 
 class pre_order_list_FunctionTest(TestCase):
-    """"""
-
     def setUp(self):
-        """ called before each test from this class """
+        """called before each test from this class"""
         self.o = make_tree(tree)
 
     def test_known_values_pre_order_list(self):
@@ -290,10 +284,8 @@ class pre_order_list_FunctionTest(TestCase):
 
 
 class PrefixedDepthFirstIterator_ClassTest(TestCase):
-    """"""
-
     def setUp(self):
-        """ called before each test from this class """
+        """called before each test from this class"""
         self.o = make_tree(tree)
 
     def test_known_values_next(self):

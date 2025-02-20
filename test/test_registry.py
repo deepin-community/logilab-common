@@ -21,7 +21,6 @@ import gc
 import logging
 import sys
 from contextlib import contextmanager
-import warnings
 
 from logilab.common.testlib import (
     TestCase,
@@ -99,11 +98,11 @@ class SelectorsTC(TestCase):
 
     def test_composition(self):
         selector = (_1_() & _1_()) & (_1_() & _1_())
-        self.assertTrue(isinstance(selector, AndPredicate))
+        self.assertIsInstance(selector, AndPredicate)
         self.assertEqual(len(selector.selectors), 4)
         self.assertEqual(selector(None), 4)
         selector = (_1_() & _0_()) | (_1_() & _1_())
-        self.assertTrue(isinstance(selector, OrPredicate))
+        self.assertIsInstance(selector, OrPredicate)
         self.assertEqual(len(selector.selectors), 2)
         self.assertEqual(selector(None), 2)
 
@@ -189,42 +188,24 @@ def prepended_syspath(path):
 
 
 class RegistryStoreTC(TestCase):
-    def test_autoload(self):
-        store = RegistryStore()
-        store.setdefault("zereg")
-        with prepended_syspath(self.datadir):
-            with warnings.catch_warnings(record=True) as warns:
-                store.register_objects(
-                    [self.datapath("regobjects.py"), self.datapath("regobjects2.py")]
-                )
-                self.assertIn(
-                    "[logilab.common.registry] use register_modnames() instead",
-                    [str(w.message) for w in warns],
-                )
-        self.assertEqual(["zereg"], list(store.keys()))
-        self.assertEqual(set(("appobject1", "appobject2", "appobject3")), set(store["zereg"]))
-
     def test_autoload_modnames(self):
         store = RegistryStore()
         store.setdefault("zereg")
         with prepended_syspath(self.datadir):
             store.register_modnames(["regobjects", "regobjects2"])
         self.assertEqual(["zereg"], list(store.keys()))
-        self.assertEqual(set(("appobject1", "appobject2", "appobject3")), set(store["zereg"]))
+        self.assertEqual({"appobject1", "appobject2", "appobject3"}, set(store["zereg"]))
 
 
 class RegistrableInstanceTC(TestCase):
     def test_instance_modulename(self):
-        with warnings.catch_warnings(record=True) as warns:
-            obj = RegistrableInstance()
-            self.assertEqual(obj.__module__, "test_registry")
-            self.assertIn(
-                "instantiate RegistrableInstance with __module__=__name__",
-                [str(w.message) for w in warns],
-            )
+        obj = RegistrableInstance()
+        self.assertEqual(obj.__module__, "logilab.common.registry")
+
         # no inheritance
         obj = RegistrableInstance(__module__=__name__)
         self.assertEqual(obj.__module__, "test_registry")
+
         # with inheritance from another python file
         with prepended_syspath(self.datadir):
             from regobjects2 import instance, MyRegistrableInstance

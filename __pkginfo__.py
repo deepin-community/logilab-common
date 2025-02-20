@@ -28,13 +28,12 @@ modname = "common"
 subpackage_of = "logilab"
 subpackage_master = True
 
-numversion = (1, 8, 1)
+numversion = (2, 0, 0)
 version = ".".join([str(num) for num in numversion])
 
 license = "LGPL"  # 2.1 or later
 description = "collection of low-level Python packages and modules" " used by Logilab projects"
-web = "http://www.logilab.org/project/%s" % distname
-mailinglist = "mailto://python-projects@lists.logilab.org"
+web = "https://forge.extranet.logilab.fr/open-source/logilab-common"
 author = "Logilab"
 author_email = "contact@logilab.fr"
 
@@ -46,6 +45,7 @@ install_requires = [
     "setuptools",
     "mypy-extensions",
     "typing_extensions",
+    'importlib_metadata>=6,<7; python_version < "3.10"',
 ]
 tests_require = [
     "pytz",

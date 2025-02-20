@@ -31,7 +31,6 @@ __docformat__ = "restructuredtext en"
 
 import sys
 import types
-from typing import Union
 
 # not used here, but imported to preserve API
 import builtins  # noqa
@@ -41,12 +40,6 @@ def str_to_bytes(string):
     return str.encode(string)
 
 
-# we have to ignore the encoding in py3k to be able to write a string into a
-# TextIOWrapper or like object (which expect an unicode string)
-def str_encode(string: Union[int, str], encoding: str) -> str:
-    return str(string)
-
-
 # See also http://bugs.python.org/issue11776
 if sys.version_info[0] == 3:
 
@@ -54,25 +47,6 @@ if sys.version_info[0] == 3:
         # api change. klass is no more considered
         return types.MethodType(callable, instance)
 
-
 else:
     # alias types otherwise
     method_type = types.MethodType
-
-# Pythons 2 and 3 differ on where to get StringIO
-if sys.version_info < (3, 0):
-    from cStringIO import StringIO
-
-    FileIO = file  # noqa
-    BytesIO = StringIO
-    reload = reload  # noqa
-else:
-    from io import StringIO, FileIO  # noqa
-    from imp import reload  # noqa
-
-from logilab.common.deprecation import callable_deprecated  # noqa
-
-# Other projects import these from here, keep providing them for
-# backwards compat
-any = callable_deprecated('use builtin "any"')(any)
-all = callable_deprecated('use builtin "all"')(all)

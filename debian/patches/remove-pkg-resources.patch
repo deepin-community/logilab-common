@@ -1,0 +1,10 @@
+--- a/__pkginfo__.py
++++ b/__pkginfo__.py
+@@ -42,7 +42,6 @@
+ include_dirs = [join("test", "data")]
+ 
+ install_requires = [
+-    "setuptools",
+     "mypy-extensions",
+     "typing_extensions",
+     'importlib_metadata>=6,<7; python_version < "3.10"',

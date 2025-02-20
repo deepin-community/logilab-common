@@ -107,7 +107,6 @@ Quick start: simplest usage
 
 """
 
-from __future__ import print_function
 
 __docformat__ = "restructuredtext en"
 
@@ -122,18 +121,16 @@ __all__ = (
 import os
 import sys
 import re
+from difflib import get_close_matches
 from os.path import exists, expanduser
 from optparse import OptionGroup
 from copy import copy
 from _io import StringIO, TextIOWrapper
 from typing import Any, Optional, Union, Dict, List, Tuple, Iterator, Callable
-from warnings import warn
 
 import configparser as cp
 
 from logilab.common.types import OptionParser, Option, attrdict
-from logilab.common.compat import str_encode as _encode
-from logilab.common.deprecation import callable_deprecated
 from logilab.common.textutils import normalize_text, unquote
 from logilab.common import optik_ext
 
@@ -255,7 +252,8 @@ def _call_validator(
     opttype: str, optdict: Dict[str, Any], option: str, value: Union[List[str], int, str]
 ) -> Union[List[str], int, str]:
     if opttype not in VALIDATORS:
-        raise Exception('Unsupported type "%s"' % opttype)
+        all_validators = "\n - ".join(sorted(VALIDATORS.keys()))
+        raise Exception(f'Unsupported type "{opttype}", supported types are:\n - {all_validators}')
     try:
         return VALIDATORS[opttype](optdict, option, value)
     except TypeError:
@@ -265,7 +263,7 @@ def _call_validator(
             raise
         except Exception:
             raise optik_ext.OptionValueError(
-                "%s value (%r) should be of type %s" % (option, value, opttype)
+                f"{option} value ({value!r}) should be of type {opttype}"
             )
 
 
@@ -302,7 +300,7 @@ def _make_input_function(opttype):
                 return _call_validator(opttype, optdict, None, value)
             except optik_ext.OptionValueError as ex:
                 msg = str(ex).split(":", 1)[-1].strip()
-                print("bad value: %s" % msg)
+                print(f"bad value: {msg}")
 
     return input_validator
 
@@ -355,49 +353,47 @@ def _validate(
     return _call_validator(_type, optdict, name, value)
 
 
-convert = callable_deprecated("[0.60] convert() was renamed _validate()")(_validate)
-
 # format and output functions ##################################################
 
 
 def comment(string):
     """return string as a comment"""
     lines = [line.strip() for line in string.splitlines()]
-    return "# " + ("%s# " % os.linesep).join(lines)
+    return "# " + f"{os.linesep}# ".join(lines)
 
 
 def format_time(value):
     if not value:
         return "0"
     if value != int(value):
-        return "%.2fs" % value
+        return f"{value:.2f}s"
     value = int(value)
     nbmin, nbsec = divmod(value, 60)
     if nbsec:
-        return "%ss" % value
+        return f"{value}s"
     nbhour, nbmin_ = divmod(nbmin, 60)
     if nbmin_:
-        return "%smin" % nbmin
+        return f"{nbmin}min"
     nbday, nbhour_ = divmod(nbhour, 24)
     if nbhour_:
-        return "%sh" % nbhour
-    return "%sd" % nbday
+        return f"{nbhour}h"
+    return f"{nbday}d"
 
 
 def format_bytes(value: int) -> str:
     if not value:
         return "0"
     if value != int(value):
-        return "%.2fB" % value
+        return f"{value:.2f}B"
     value = int(value)
     prevunit = "B"
     for unit in ("KB", "MB", "GB", "TB"):
         next, remain = divmod(value, 1024)
         if remain:
-            return "%s%s" % (value, prevunit)
+            return f"{value}{prevunit}"
         prevunit = unit
         value = next
-    return "%s%s" % (value, unit)
+    return f"{value}{unit}"
 
 
 def format_option_value(optdict: Dict[str, Any], value: Any) -> Union[None, int, str]:
@@ -405,14 +401,14 @@ def format_option_value(optdict: Dict[str, Any], value: Any) -> Union[None, int,
     if isinstance(value, (list, tuple)):
         value = ",".join(value)
     elif isinstance(value, dict):
-        value = ",".join(["%s:%s" % (k, v) for k, v in value.items()])
+        value = ",".join([f"{k}:{v}" for k, v in value.items()])
     elif hasattr(value, "match"):  # optdict.get('type') == 'regexp'
         # compiled regexp
         value = value.pattern
     elif optdict.get("type") == "yn":
         value = value and "yes" or "no"
     elif isinstance(value, str) and value.isspace():
-        value = "'%s'" % value
+        value = f"'{value}'"
     elif optdict.get("type") == "time" and isinstance(value, (float, int)):
         value = format_time(value)
     elif optdict.get("type") == "bytes" and hasattr(value, "__int__"):
@@ -430,8 +426,8 @@ def ini_format_section(
     """format an options section using the INI format"""
     encoding = _get_encoding(encoding, stream)
     if doc:
-        print(_encode(comment(doc), encoding), file=stream)
-    print("[%s]" % section, file=stream)
+        print(str(comment(doc), encoding), file=stream)
+    print(f"[{section}]", file=stream)
     ini_format(stream, options, encoding)
 
 
@@ -443,17 +439,17 @@ def ini_format(stream: Union[StringIO, TextIOWrapper], options: Any, encoding: s
         if help:
             help = normalize_text(help, line_len=79, indent="# ")
             print(file=stream)
-            print(_encode(help, encoding), file=stream)
+            print(str(help), file=stream)
         else:
             print(file=stream)
         if value is None:
-            print("#%s=" % optname, file=stream)
+            print(f"#{optname}=", file=stream)
         else:
-            value = _encode(value, encoding).strip()
+            value = str(value).strip()
             if optdict.get("type") == "string" and "\n" in value:
                 prefix = "\n    "
                 value = prefix + prefix.join(value.split("\n"))
-            print("%s=%s" % (optname, value), file=stream)
+            print(f"{optname}={value}", file=stream)
 
 
 format_section = ini_format_section
@@ -465,24 +461,24 @@ def rest_format_section(stream, section, options, encoding=None, doc=None):
     if section:
         print("%s\n%s" % (section, "'" * len(section)), file=stream)
     if doc:
-        print(_encode(normalize_text(doc, line_len=79, indent=""), encoding), file=stream)
+        print(str(normalize_text(doc, line_len=79, indent="")), file=stream)
         print(file=stream)
     for optname, optdict, value in options:
         help = optdict.get("help")
-        print(":%s:" % optname, file=stream)
+        print(f":{optname}:", file=stream)
         if help:
             help = normalize_text(help, line_len=79, indent="  ")
-            print(_encode(help, encoding), file=stream)
+            print(str(help), file=stream)
         if value:
-            value = _encode(format_option_value(optdict, value), encoding)
+            value = str(format_option_value(optdict, value))
             print(file=stream)
-            print("  Default: ``%s``" % value.replace("`` ", "```` ``"), file=stream)
+            print(f"  Default: ``{value.replace('`` ', '```` ``')}``", file=stream)
 
 
 # Options Manager ##############################################################
 
 
-class OptionsManagerMixIn(object):
+class OptionsManagerMixIn:
     """MixIn to handle a configuration from both a configuration file and
     command line options
     """
@@ -589,12 +585,11 @@ class OptionsManagerMixIn(object):
         optdict: Dict[str, Any],
     ) -> None:
         if "inputlevel" in optdict:
-            warn(
-                '[0.50] "inputlevel" in option dictionary for %s is deprecated,'
-                ' use "level"' % opt,
-                DeprecationWarning,
+            raise ValueError(
+                "optdict dictionary argument shouldn't contain the key 'inputlevel', rename it to "
+                f"'level' instead: {optdict}"
             )
-            optdict["level"] = optdict.pop("inputlevel")
+
         args, optdict = self.optik_option(provider, opt, optdict)
         option = optikcontainer.add_option(*args, **optdict)
         self._all_options[opt] = provider
@@ -657,6 +652,7 @@ class OptionsManagerMixIn(object):
         stream: Union[StringIO, TextIOWrapper] = None,
         skipsections: Tuple[()] = (),
         encoding: Optional[Any] = None,
+        header_message: Optional[str] = None,
     ) -> None:
         """write a configuration file according to the current configuration
         into the given stream or stdout
@@ -680,6 +676,14 @@ class OptionsManagerMixIn(object):
         stream = stream or sys.stdout
         encoding = _get_encoding(encoding, stream)
         printed = False
+        if header_message is not None:
+            # Make sure all the lines in header_message begin with '# '
+            # This is done by matching all the lines that do not start
+            # with '#' (possibly with whitespaces) and prefix them by '# '
+            exp = re.compile(r"^\s*(?=[^#])", re.MULTILINE)
+            commented_header = exp.sub("# ", header_message)
+            print(commented_header, file=stream)
+
         for section in sections:
             if printed:
                 print("\n", file=stream)
@@ -730,7 +734,7 @@ class OptionsManagerMixIn(object):
                 print(self.help(level))
                 sys.exit(0)
 
-            helpmsg = "%s verbose help." % " ".join(["more"] * helplevel)
+            helpmsg = f"{' '.join(['more'] * helplevel)} verbose help."
             optdict = {"action": "callback", "callback": helpfunc, "help": helpmsg}
             provider = self.options_providers[0]
             self.add_optik_option(provider, self.cmdline_parser, opt, optdict)
@@ -819,7 +823,7 @@ class OptionsManagerMixIn(object):
     # help methods ############################################################
 
     def add_help_section(self, title: str, description: str, level: int = 0) -> None:
-        """add a dummy option section for help purpose """
+        """add a dummy option section for help purpose"""
         group = optik_ext.OptionGroup(
             self.cmdline_parser, title=title.capitalize(), description=description
         )
@@ -850,7 +854,7 @@ class OptionsManagerMixIn(object):
             optik_ext.HelpFormatter.expand_default = self.__expand_default_backup  # type: ignore
 
     def help(self, level: int = 0) -> str:
-        """return the usage string for available options """
+        """return the usage string for available options"""
         # mypy: "HelpFormatter" has no attribute "output_level"
         # set in optik_ext
         self.cmdline_parser.formatter.output_level = level  # type: ignore
@@ -861,7 +865,7 @@ class OptionsManagerMixIn(object):
             self._unmonkeypatch_expand_default()
 
 
-class Method(object):
+class Method:
     """used to ease late binding of default method (so you can define options
     on the class using default methods on the configuration instance)
     """
@@ -883,7 +887,7 @@ class Method(object):
 # Options Provider #############################################################
 
 
-class OptionsProviderMixIn(object):
+class OptionsProviderMixIn:
     """Mixin to provide options to an OptionsManager"""
 
     # those attributes should be overridden
@@ -898,7 +902,7 @@ class OptionsProviderMixIn(object):
             try:
                 option, optdict = option_tuple
             except ValueError:
-                raise Exception("Bad option: %s" % str(option_tuple))
+                raise Exception(f"Bad option: {str(option_tuple)}")
             if isinstance(optdict.get("default"), Method):
                 optdict["default"].bind(self)
             elif isinstance(optdict.get("callback"), Method):
@@ -930,10 +934,6 @@ class OptionsProviderMixIn(object):
         if optdict is None:
             optdict = self.get_option_def(opt)
         return optdict.get("dest", opt.replace("-", "_"))
-
-    option_name = callable_deprecated(
-        "[0.60] OptionsProviderMixIn.option_name() was renamed to option_attrname()"
-    )(option_attrname)
 
     def option_value(self, opt):
         """get the current value for the given option"""
@@ -987,14 +987,14 @@ class OptionsProviderMixIn(object):
         elif optdict["type"] == "password" or default is None:
             defaultstr = ": "
         else:
-            defaultstr = "(default: %s): " % format_option_value(optdict, default)
-        print(":%s:" % option)
+            defaultstr = f"(default: {format_option_value(optdict, default)}): "
+        print(f":{option}:")
         print(optdict.get("help") or option)
         inputfunc = INPUT_FUNCTIONS[optdict["type"]]
         value = inputfunc(optdict, defaultstr)
         while default is REQUIRED and not value:
             print("please specify a value")
-            value = inputfunc(optdict, "%s: " % option)
+            value = inputfunc(optdict, f"{option}: ")
         if value is None and default is not None:
             value = default
         self.set_option(option, value, optdict=optdict)
@@ -1007,7 +1007,20 @@ class OptionsProviderMixIn(object):
                 return option[1]
         # mypy: Argument 2 to "OptionError" has incompatible type "str"; expected "Option"
         # seems to be working?
-        raise OptionError("no such option %s in section %r" % (opt, self.name), opt)  # type: ignore
+        similar_options = get_close_matches(opt, (str(x[0]) for x in self.options), n=10)
+        if similar_options:
+            raise OptionError(
+                "no such option %s in section %r.\n\nOptions with a similar name are:\n * %s"
+                % (opt, self.name, "\n * ".join(similar_options)),
+                opt,
+            )  # type: ignore
+        else:
+            raise OptionError(
+                "no such option %s in section %r.\n\nNo option with a similar name, "
+                "all available options:\n * %s"
+                % (opt, self.name, "\n * ".join(str(x[0]) for x in self.options)),
+                opt,
+            )  # type: ignore
 
     def all_options(self):
         """return an iterator on available options for this provider
@@ -1123,7 +1136,7 @@ class Configuration(ConfigurationMixIn):
         super(Configuration, self).__init__(config_file=config_file, usage=usage, version=version)
 
 
-class OptionsManager2ConfigurationAdapter(object):
+class OptionsManager2ConfigurationAdapter:
     """Adapt an option manager to behave like a
     `logilab.common.configuration.Configuration` instance
     """
@@ -1179,7 +1192,7 @@ def read_old_config(newconfig, changes, configfile):
             continue
         if action[0] in ("added", "removed"):
             continue  # nothing to do here
-        raise Exception("unknown change %s" % action[0])
+        raise Exception(f"unknown change {action[0]}")
     # build a config object able to read the old config
     options = []
     for optname, optdef in newconfig.options:
@@ -1196,7 +1209,7 @@ def read_old_config(newconfig, changes, configfile):
                 optdef["type"] = oldtype
         options.append((optname, optdef))
     if changesindex:
-        raise Exception("unapplied changes: %s" % changesindex)
+        raise Exception(f"unapplied changes: {changesindex}")
     oldconfig = Configuration(options=options, name=newconfig.name)
     # read the old config
     oldconfig.load_file_configuration(configfile)

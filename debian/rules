@@ -10,7 +10,7 @@ LIB3 := $(shell python3 -c "from distutils.command.build import build ; from dis
 SCRIPT3 := $(shell python3 -c "from distutils.command.build import build ; from distutils.core import Distribution ; b = build(Distribution()) ; b.finalize_options() ; print (b.build_scripts)")
 
 %:
-	dh $@ --with python3,sphinxdoc --buildsystem=pybuild
+	dh $@ --with sphinxdoc --buildsystem=pybuild
 
 override_dh_auto_build:
 	# python module build
@@ -46,8 +46,8 @@ override_dh_auto_clean:
 	NO_SETUPTOOLS=1 python3 setup.py clean
 
 	find . -name "*.pyc" -delete
-
-	dh_clean
+	rm -rf docs/_build build/ .pybuild/
+	dh_auto_clean
 
 override_dh_auto_install: build
 	NO_SETUPTOOLS=1 python3 setup.py install --no-compile \

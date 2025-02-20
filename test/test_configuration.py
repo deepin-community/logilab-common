@@ -20,10 +20,10 @@ import os
 from os.path import join, dirname, abspath
 import re
 
+from io import StringIO
 from sys import version_info
 
 from logilab.common import attrdict
-from logilab.common.compat import StringIO
 from logilab.common.testlib import TestCase, unittest_main
 from logilab.common.optik_ext import OptionValueError
 from logilab.common.configuration import (
@@ -266,6 +266,22 @@ diffgroup=pouet
 
 #opt-b-2=""",
         )
+
+    def test_generate_config_header(self):
+        header_message = """This a multiline header
+    All lines should be commented.
+    Everything should be at the top of the file."""
+
+        commented_header_message = """# This a multiline header
+# All lines should be commented.
+# Everything should be at the top of the file."""
+        exepected_stream = StringIO()
+        print(commented_header_message, file=exepected_stream)
+        self.cfg.generate_config(exepected_stream)
+
+        stream = StringIO()
+        self.cfg.generate_config(stream, header_message=header_message)
+        self.assertMultiLineEqual(stream.getvalue().strip(), exepected_stream.getvalue().strip())
 
     def test_generate_config_with_space_string(self):
         self.cfg["value"] = "    "

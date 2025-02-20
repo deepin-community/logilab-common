@@ -1,3 +1,68 @@
+logilab-common (2.0.0-3) unstable; urgency=medium
+
+  * Team upload.
+  * Do not generate a dependency on python3-pkg-resources (Close: #1083467)
+
+ -- Alexandre Detiste <tchet@debian.org>  Sat, 18 Jan 2025 20:01:37 +0100
+
+logilab-common (2.0.0-2) unstable; urgency=medium
+
+  * Team Upload
+  * Set DPT as Maintainer per new Team Policy
+  * Use dh-sequence-python3
+
+ -- Alexandre Detiste <tchet@debian.org>  Fri, 17 Jan 2025 13:42:13 +0100
+
+logilab-common (2.0.0-1) unstable; urgency=medium
+
+  * New upstream version 2.0.0 (Closes: #1058956)
+  * debian/control
+    + Set myself as maintainer (Closes: #1065239)
+    + Add ${sphinxdoc:Depends} in Depends.
+    + Set Rules-Requires-Root no.
+  * debian/rules
+    + Use dh_auto_clean to fix
+      ftbfs-source-after-build. (Closes: #1046081)
+  * Add debian/tests/control file.
+  * Update d/watch file.
+
+ -- Daniel Echeverri <epsilon@debian.org>  Sun, 07 Apr 2024 10:20:57 -0500
+
+logilab-common (1.9.8-2) unstable; urgency=medium
+
+  * orphan
+
+ -- Sandro Tosi <morph@debian.org>  Sat, 02 Mar 2024 02:32:17 -0500
+
+logilab-common (1.9.8-1) unstable; urgency=medium
+
+  * New upstream release
+  * debian/copyright
+    - extend packaging copyright years
+  * debian/control
+    - bump Standards-Version to 4.6.2.0 (no changes needed)
+
+ -- Sandro Tosi <morph@debian.org>  Sun, 22 Jan 2023 00:43:33 -0500
+
+logilab-common (1.9.7-1) unstable; urgency=medium
+
+  * New upstream release
+  * debian/copyright
+    - extend packaging copyright years
+  * debian/control
+    - bump Standards-Version to 4.6.1.0 (no changes needed)
+    - drop XS-Python-Version field, no longer needed
+
+ -- Sandro Tosi <morph@debian.org>  Sat, 10 Dec 2022 00:16:45 -0500
+
+logilab-common (1.8.2-1) unstable; urgency=medium
+
+  * New upstream release
+  * debian/control
+    - bump Standards-Version to 4.6.0.1 (no changes needed)
+
+ -- Sandro Tosi <morph@debian.org>  Sun, 05 Dec 2021 01:20:54 -0500
+
 logilab-common (1.8.1-1) unstable; urgency=medium
 
   * New upstream release

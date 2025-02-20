@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with logilab-common.  If not, see <http://www.gnu.org/licenses/>.
 """Date manipulation helper functions."""
-from __future__ import division
 
 __docformat__ = "restructuredtext en"
 
@@ -28,8 +27,6 @@ from datetime import date, time, datetime, timedelta
 from time import strptime as time_strptime
 from calendar import monthrange, timegm
 from typing import Union, List, Any, Optional, Generator
-
-from logilab.common.deprecation import callable_deprecated
 
 try:
     from mx.DateTime import RelativeDateTime, Date, DateTimeType
@@ -213,8 +210,6 @@ def date_range(
 
 ONEDAY: timedelta = timedelta(days=1)
 ONEWEEK: timedelta = timedelta(days=7)
-
-strptime = callable_deprecated("Use strptime from datetime.datetime instead")(datetime.strptime)
 
 
 def strptime_time(value, format="%H:%M"):

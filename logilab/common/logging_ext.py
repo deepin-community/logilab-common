@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # copyright 2003-2011 LOGILAB S.A. (Paris, FRANCE), all rights reserved.
 # contact http://www.logilab.fr/ -- mailto:contact@logilab.fr
 #
@@ -56,11 +55,11 @@ class ColorFormatter(logging.Formatter):
         logging.Formatter.__init__(self, fmt, datefmt)
         self.colorfilters = []
         self.colors = {
-            "CRITICAL": "red",
+            "CRITICAL": "background_red",
             "ERROR": "red",
-            "WARNING": "magenta",
-            "INFO": "green",
-            "DEBUG": "yellow",
+            "WARNING": "yellow",
+            "INFO": "white",
+            "DEBUG": "cyan",
         }
         if colors is not None:
             assert isinstance(colors, dict)
@@ -127,7 +126,7 @@ def get_handler(debug=False, syslog=False, logfile=None, rotation_parameters=Non
                 from logging.handlers import TimedRotatingFileHandler
 
                 handler = TimedRotatingFileHandler(logfile, **rotation_parameters)
-        except IOError:
+        except OSError:
             handler = logging.StreamHandler()
     return handler
 

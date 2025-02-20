@@ -66,11 +66,9 @@ class CacheTestCase(TestCase):
         self.cache[4] = "foz"
         self.cache[5] = "fuz"
         self.cache[6] = "spam"
-        self.assertTrue(
-            1 not in self.cache, "key 1 has not been suppressed from the cache dictionnary"
-        )
-        self.assertTrue(
-            1 not in self.cache._usage, "key 1 has not been suppressed from the cache LRU list"
+        self.assertNotIn(1, self.cache, "key 1 has not been suppressed from the cache dictionnary")
+        self.assertNotIn(
+            1, self.cache._usage, "key 1 has not been suppressed from the cache LRU list"
         )
         self.assertEqual(len(self.cache._usage), 5, "lenght of usage list is not 5")
         self.assertEqual(self.cache._usage[-1], 6, "6 is not the most recently used key")
@@ -97,10 +95,10 @@ class CacheTestCase(TestCase):
         """
         self.cache["foo"] = "bar"
         del self.cache["foo"]
-        self.assertTrue(
-            "foo" not in self.cache.keys(), "Element 'foo' was not removed cache dictionnary"
+        self.assertNotIn(
+            "foo", self.cache.keys(), "Element 'foo' was not removed cache dictionnary"
         )
-        self.assertTrue("foo" not in self.cache._usage, "Element 'foo' was not removed usage list")
+        self.assertNotIn("foo", self.cache._usage, "Element 'foo' was not removed usage list")
         self.assertCountEqual(
             self.cache._usage, self.cache.keys()
         )  # usage list and data keys are different
@@ -121,7 +119,7 @@ class CacheTestCase(TestCase):
         try:
             self.cache["toto"]
         except KeyError:
-            self.assertTrue("toto" not in self.cache._usage)
+            self.assertNotIn("toto", self.cache._usage)
         else:
             self.fail("excepted KeyError")
 

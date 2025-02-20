@@ -23,7 +23,6 @@ docs/logilab.rst
 docs/make.bat
 docs/modules.rst
 docs/requirements-doc.txt
-logilab/__init__.py
 logilab/common/__init__.py
 logilab/common/cache.py
 logilab/common/changelog.py
@@ -41,10 +40,8 @@ logilab/common/interface.py
 logilab/common/logging_ext.py
 logilab/common/modutils.py
 logilab/common/optik_ext.py
-logilab/common/optparser.py
 logilab/common/proc.py
 logilab/common/py.typed
-logilab/common/pytest.py
 logilab/common/registry.py
 logilab/common/shellutils.py
 logilab/common/sphinx_ext.py
@@ -81,7 +78,6 @@ test/test_fileutils.py
 test/test_graph.py
 test/test_interface.py
 test/test_modutils.py
-test/test_pytest.py
 test/test_registry.py
 test/test_shellutils.py
 test/test_table.py

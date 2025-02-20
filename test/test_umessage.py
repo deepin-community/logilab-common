@@ -1,4 +1,3 @@
-# encoding: iso-8859-15
 # copyright 2003-2012 LOGILAB S.A. (Paris, FRANCE), all rights reserved.
 # contact http://www.logilab.fr/ -- mailto:contact@logilab.fr
 #
@@ -29,10 +28,10 @@ DATA = join(dirname(abspath(__file__)), "data")
 class UMessageTC(TestCase):
     def setUp(self):
         if sys.version_info >= (3, 2):
-            import io
+            pass
 
-            msg1 = email.message_from_file(io.open(join(DATA, "test1.msg"), encoding="utf8"))
-            msg2 = email.message_from_file(io.open(join(DATA, "test2.msg"), encoding="utf8"))
+            msg1 = email.message_from_file(open(join(DATA, "test1.msg"), encoding="utf8"))
+            msg2 = email.message_from_file(open(join(DATA, "test2.msg"), encoding="utf8"))
         else:
             msg1 = email.message_from_file(open(join(DATA, "test1.msg")))
             msg2 = email.message_from_file(open(join(DATA, "test2.msg")))
@@ -42,12 +41,12 @@ class UMessageTC(TestCase):
     def test_get_subject(self):
         subj = self.umessage2.get("Subject")
         self.assertEqual(type(subj), str)
-        self.assertEqual(subj, "À LA MER")
+        self.assertEqual(subj, "Ã€ LA MER")
 
     def test_get_all(self):
         to = self.umessage2.get_all("To")
         self.assertEqual(type(to[0]), str)
-        self.assertEqual(to, ["élément à accents <alf@logilab.fr>"])
+        self.assertEqual(to, ["Ã©lÃ©ment Ã  accents <alf@logilab.fr>"])
 
     def test_get_payload_no_multi(self):
         payload = self.umessage1.get_payload()
@@ -68,19 +67,19 @@ Date: now
 dW4gcGV0aXQgY8O2dWNvdQ==
 """
         msg = message_from_string(msg)
-        self.assertEqual(msg.get_payload(decode=True), "un petit cöucou")
+        self.assertEqual(msg.get_payload(decode=True), "un petit cÃ¶ucou")
 
     def test_decode_QP(self):
         test_line = "=??b?UmFwaGHrbA==?= DUPONT<raphael.dupont@societe.fr>"
         test = decode_QP(test_line)
         self.assertEqual(type(test), str)
-        self.assertEqual(test, "Raphaël DUPONT<raphael.dupont@societe.fr>")
+        self.assertEqual(test, "RaphaÃ«l DUPONT<raphael.dupont@societe.fr>")
 
     def test_decode_QP_utf8(self):
         test_line = "=?utf-8?q?o=C3=AEm?= <oim@logilab.fr>"
         test = decode_QP(test_line)
         self.assertEqual(type(test), str)
-        self.assertEqual(test, "oîm <oim@logilab.fr>")
+        self.assertEqual(test, "oÃ®m <oim@logilab.fr>")
 
     def test_decode_QP_ascii(self):
         test_line = "test <test@logilab.fr>"

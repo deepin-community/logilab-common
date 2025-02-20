@@ -45,10 +45,10 @@ class HTMLWriter(BaseWriter):
         attrs = ""
         klass = getattr(layout, "klass", None)
         if klass:
-            attrs += ' class="%s"' % klass
+            attrs += f' class="{klass}"'
         nid = getattr(layout, "id", None)
         if nid:
-            attrs += ' id="%s"' % nid
+            attrs += f' id="{nid}"'
         return attrs
 
     def begin_format(self, layout: Any) -> None:
@@ -67,20 +67,20 @@ class HTMLWriter(BaseWriter):
     def visit_section(self, layout: Section) -> None:
         """display a section as html, using div + h[section level]"""
         self.section += 1
-        self.writeln("<div%s>" % self.handle_attrs(layout))
+        self.writeln(f"<div{self.handle_attrs(layout)}>")
         self.format_children(layout)
         self.writeln("</div>")
         self.section -= 1
 
     def visit_title(self, layout: Title) -> None:
         """display a title using <hX>"""
-        self.write("<h%s%s>" % (self.section, self.handle_attrs(layout)))
+        self.write(f"<h{self.section}{self.handle_attrs(layout)}>")
         self.format_children(layout)
-        self.writeln("</h%s>" % self.section)
+        self.writeln(f"</h{self.section}>")
 
     def visit_table(self, layout: Table) -> None:
         """display a table as html"""
-        self.writeln("<table%s>" % self.handle_attrs(layout))
+        self.writeln(f"<table{self.handle_attrs(layout)}>")
         table_content = self.get_table_content(layout)
         for i in range(len(table_content)):
             row = table_content[i]
@@ -98,17 +98,17 @@ class HTMLWriter(BaseWriter):
                     or (layout.rrheaders and i + 1 == len(table_content))
                     or (layout.rcheaders and j + 1 == len(row))
                 ):
-                    self.writeln("<th>%s</th>" % cell)
+                    self.writeln(f"<th>{cell}</th>")
                 else:
-                    self.writeln("<td>%s</td>" % cell)
+                    self.writeln(f"<td>{cell}</td>")
             self.writeln("</tr>")
         self.writeln("</table>")
 
     def visit_list(self, layout: List) -> None:
         """display a list as html"""
-        self.writeln("<ul%s>" % self.handle_attrs(layout))
+        self.writeln(f"<ul{self.handle_attrs(layout)}>")
         for row in list(self.compute_content(layout)):
-            self.writeln("<li>%s</li>" % row)
+            self.writeln(f"<li>{row}</li>")
         self.writeln("</ul>")
 
     def visit_paragraph(self, layout: Paragraph) -> None:
@@ -119,13 +119,13 @@ class HTMLWriter(BaseWriter):
 
     def visit_span(self, layout):
         """display links (using <p>)"""
-        self.write("<span%s>" % self.handle_attrs(layout))
+        self.write(f"<span{self.handle_attrs(layout)}>")
         self.format_children(layout)
         self.write("</span>")
 
     def visit_link(self, layout: Link) -> None:
         """display links (using <a>)"""
-        self.write(' <a href="%s"%s>%s</a>' % (layout.url, self.handle_attrs(layout), layout.label))
+        self.write(f' <a href="{layout.url}"{self.handle_attrs(layout)}>{layout.label}</a>')
 
     def visit_verbatimtext(self, layout: VerbatimText) -> None:
         """display verbatim text (using <pre>)"""

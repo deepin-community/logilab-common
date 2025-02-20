@@ -46,7 +46,6 @@ It also defines three new types for optik/optparse command line parser :
     argument of this type will be converted to a float value in bytes
     according to byte units (b, kb, mb, gb, tb)
 """
-from __future__ import print_function
 
 __docformat__ = "restructuredtext en"
 
@@ -93,7 +92,7 @@ def check_regexp(option, opt, value):
     try:
         return re.compile(value)
     except ValueError:
-        raise OptionValueError("option %s: invalid regexp value: %r" % (opt, value))
+        raise OptionValueError(f"option {opt}: invalid regexp value: {value!r}")
 
 
 def check_csv(
@@ -107,7 +106,7 @@ def check_csv(
     try:
         return splitstrip(value)
     except ValueError:
-        raise OptionValueError("option %s: invalid csv value: %r" % (opt, value))
+        raise OptionValueError(f"option {opt}: invalid csv value: {value!r}")
 
 
 def check_yn(option: Optional["Option"], opt: str, value: Union[bool, str]) -> bool:
@@ -172,7 +171,7 @@ def check_date(option, opt, value):
     try:
         return DateTime.strptime(value, "%Y/%m/%d")
     except DateTime.Error:
-        raise OptionValueError("expected format of %s is yyyy/mm/dd" % opt)
+        raise OptionValueError(f"expected format of {opt} is yyyy/mm/dd")
 
 
 def check_color(option, opt, value):
@@ -258,7 +257,7 @@ class Option(BaseOption):
                     self,
                 )
         elif self.choices is not None:  # type: ignore
-            raise OptionError("must not supply choices for type %r" % self.type, self)
+            raise OptionError(f"must not supply choices for type {self.type!r}", self)
 
     # mypy: Unsupported target for indexed assignment
     # black magic?
@@ -357,7 +356,7 @@ class ManHelpFormatter(HelpFormatter):
         HelpFormatter.__init__(self, indent_increment, max_help_position, width, short_first)
 
     def format_heading(self, heading: str) -> str:
-        return ".SH %s\n" % heading.upper()
+        return f".SH {heading.upper()}\n"
 
     def format_description(self, description):
         return description
@@ -379,12 +378,9 @@ class ManHelpFormatter(HelpFormatter):
             help = " ".join([line.strip() for line in help_text.splitlines()])
         else:
             help = ""
-        return """.IP "%s"
-%s
-""" % (
-            optstring,
-            help,
-        )
+        return f""".IP "{optstring}"
+{help}
+"""
 
     def format_head(self, optparser: OptionParser, pkginfo: attrdict, section: int = 1) -> str:
         long_desc = ""
@@ -401,7 +397,7 @@ class ManHelpFormatter(HelpFormatter):
 
     def format_title(self, pgm: str, section: int) -> str:
         date = "-".join([str(num) for num in time.localtime()[:3]])
-        return '.TH %s %s "%s" %s' % (pgm, section, date, pgm)
+        return f'.TH {pgm} {section} "{date}" {pgm}'
 
     def format_short_description(self, pgm: str, short_desc: str) -> str:
         return r""".SH NAME
@@ -413,30 +409,24 @@ class ManHelpFormatter(HelpFormatter):
         )
 
     def format_synopsis(self, pgm: str) -> str:
-        return (
-            """.SH SYNOPSIS
-.B  %s
+        return f""".SH SYNOPSIS
+.B  {pgm}
 [
 .I OPTIONS
 ] [
 .I <arguments>
 ]
 """
-            % pgm
-        )
 
     def format_long_description(self, pgm, long_desc):
         long_desc = "\n".join([line.lstrip() for line in long_desc.splitlines()])
         long_desc = long_desc.replace("\n.\n", "\n\n")
         if long_desc.lower().startswith(pgm):
             long_desc = long_desc[len(pgm) :]
-        return """.SH DESCRIPTION
-.B %s
-%s
-""" % (
-            pgm,
-            long_desc.strip(),
-        )
+        return f""".SH DESCRIPTION
+.B {pgm}
+{long_desc.strip()}
+"""
 
     def format_tail(self, pkginfo: attrdict) -> str:
         tail = """.SH SEE ALSO
@@ -456,13 +446,10 @@ Please report bugs on the project\'s mailing list:
         )
 
         if hasattr(pkginfo, "copyright"):
-            tail += (
-                """
+            tail += f"""
 .SH COPYRIGHT
-%s
+{pkginfo.copyright}
 """
-                % pkginfo.copyright
-            )
 
         return tail
 

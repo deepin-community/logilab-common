@@ -201,7 +201,7 @@ class VCGPrinter:
 
     def node(self, title, **args):
         """draw a node"""
-        self._stream.write('%snode: {title:"%s"' % (self._indent, title))
+        self._stream.write(f'{self._indent}node: {{title:"{title}"')
         self._write_attributes(NODE_ATTRS, **args)
         self._stream.write("}\n")
 
@@ -223,27 +223,25 @@ class VCGPrinter:
                 _type = attributes_dict[key]
             except KeyError:
                 raise Exception(
-                    """no such attribute %s
-possible attributes are %s"""
-                    % (key, attributes_dict.keys())
+                    f"""no such attribute {key}
+possible attributes are {attributes_dict.keys()}"""
                 )
 
             if not _type:
-                self._stream.write('%s%s:"%s"\n' % (self._indent, key, value))
+                self._stream.write(f'{self._indent}{key}:"{value}"\n')
             elif _type == 1:
-                self._stream.write("%s%s:%s\n" % (self._indent, key, int(value)))
+                self._stream.write(f"{self._indent}{key}:{int(value)}\n")
             elif value in _type:
-                self._stream.write("%s%s:%s\n" % (self._indent, key, value))
+                self._stream.write(f"{self._indent}{key}:{value}\n")
             else:
                 raise Exception(
-                    """value %s isn\'t correct for attribute %s
-correct values are %s"""
-                    % (value, key, _type)
+                    f"""value {value} isn't correct for attribute {key}
+correct values are {_type}"""
                 )
 
     def _inc_indent(self):
         """increment indentation"""
-        self._indent = "  %s" % self._indent
+        self._indent = f"  {self._indent}"
 
     def _dec_indent(self):
         """decrement indentation"""

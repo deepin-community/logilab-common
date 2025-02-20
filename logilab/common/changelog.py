@@ -84,7 +84,7 @@ class Version(tuple):
         try:
             return [int(i) for i in versionstr.split(".")]
         except ValueError as ex:
-            raise ValueError("invalid literal for version '%s' (%s)" % (versionstr, ex))
+            raise ValueError(f"invalid literal for version '{versionstr}' ({ex})")
 
     def __str__(self) -> str:
         return ".".join([str(i) for i in self])
@@ -93,7 +93,7 @@ class Version(tuple):
 # upstream change log #########################################################
 
 
-class ChangeLogEntry(object):
+class ChangeLogEntry:
     """a change log entry, i.e. a set of messages associated to a version and
     its release date
     """
@@ -134,22 +134,22 @@ class ChangeLogEntry(object):
             raise NotImplementedError("sub message to specific key " "are not implemented yet")
 
     def write(self, stream: StringIO = sys.stdout) -> None:
-        """write the entry to file """
-        stream.write("%s  --  %s\n" % (self.date or "", self.version or ""))
+        """write the entry to file"""
+        stream.write(f"{self.date or ''}  --  {self.version or ''}\n")
         for msg, sub_msgs in self.messages:
-            stream.write("%s%s %s\n" % (INDENT, BULLET, msg[0]))
+            stream.write(f"{INDENT}{BULLET} {msg[0]}\n")
             stream.write("".join(msg[1:]))
             if sub_msgs:
                 stream.write("\n")
             for sub_msg in sub_msgs:
-                stream.write("%s%s %s\n" % (INDENT * 2, SUBBULLET, sub_msg[0]))
+                stream.write(f"{INDENT * 2}{SUBBULLET} {sub_msg[0]}\n")
                 stream.write("".join(sub_msg[1:]))
             stream.write("\n")
 
         stream.write("\n\n")
 
 
-class ChangeLog(object):
+class ChangeLog:
     """object representation of a whole ChangeLog file"""
 
     entry_class = ChangeLogEntry
@@ -163,7 +163,7 @@ class ChangeLog(object):
         self.load()
 
     def __repr__(self):
-        return "<ChangeLog %s at %s (%s entries)>" % (self.file, id(self), len(self.entries))
+        return f"<ChangeLog {self.file} at {id(self)} ({len(self.entries)} entries)>"
 
     def add_entry(self, entry: ChangeLogEntry) -> None:
         """add a new entry to the change log"""
@@ -193,7 +193,7 @@ class ChangeLog(object):
         entry.add_message(msg)
 
     def load(self) -> None:
-        """ read a logilab's ChangeLog from file """
+        """read a logilab's ChangeLog from file"""
         try:
             stream = codecs.open(self.file, encoding="utf-8")
         except IOError:
@@ -220,7 +220,7 @@ class ChangeLog(object):
                 self.add_entry(last)
             # if title
             elif sline and last is None:
-                self.title = "%s%s" % (self.title, line)
+                self.title = f"{self.title}{line}"
             # if new entry
             elif sline and sline[0] == BULLET:
                 expect_sub = False
@@ -241,7 +241,7 @@ class ChangeLog(object):
         stream.close()
 
     def format_title(self) -> str:
-        return "%s\n\n" % self.title.strip()
+        return f"{self.title.strip()}\n\n"
 
     def save(self):
         """write back change log"""

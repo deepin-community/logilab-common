@@ -67,16 +67,18 @@ class DotBackend:
         self._source = None
         self.emit("digraph %s {" % normalize_node_id(graphname))
         if rankdir:
-            self.emit("rankdir=%s" % rankdir)
+            self.emit(f"rankdir={rankdir}")
         if ratio:
-            self.emit("ratio=%s" % ratio)
+            self.emit(f"ratio={ratio}")
         if size:
-            self.emit('size="%s"' % size)
+            self.emit(f'size="{size}"')
         if charset:
-            assert charset.lower() in ("utf-8", "iso-8859-1", "latin1"), (
-                "unsupported charset %s" % charset
-            )
-            self.emit('charset="%s"' % charset)
+            assert charset.lower() in (
+                "utf-8",
+                "iso-8859-1",
+                "latin1",
+            ), f"unsupported charset {charset}"
+            self.emit(f'charset="{charset}"')
         for param in sorted(additionnal_param.items()):
             self.emit("=".join(param))
 
@@ -107,7 +109,7 @@ class DotBackend:
             if outputfile and outputfile.endswith(".dot"):
                 dotfile = outputfile
             else:
-                dotfile = "%s.dot" % name
+                dotfile = f"{name}.dot"
         if outputfile is not None:
             storedir, basename, target = target_info_from_filename(outputfile)
             if target != "dot":
@@ -152,7 +154,7 @@ class DotBackend:
                     )
             except OSError as e:
                 if e.errno == errno.ENOENT:
-                    e.strerror = "File not found: {0}".format(self.renderer)
+                    e.strerror = f"File not found: {self.renderer}"
                     raise
             os.unlink(dot_sourcepath)
         return outputfile
@@ -165,21 +167,21 @@ class DotBackend:
         """emit an edge from <name1> to <name2>.
         edge properties: see http://www.graphviz.org/doc/info/attrs.html
         """
-        attrs = ['%s="%s"' % (prop, value) for prop, value in props.items()]
+        attrs = [f'{prop}="{value}"' for prop, value in props.items()]
         n_from, n_to = normalize_node_id(name1), normalize_node_id(name2)
-        self.emit("%s -> %s [%s];" % (n_from, n_to, ", ".join(sorted(attrs))))
+        self.emit(f"{n_from} -> {n_to} [{', '.join(sorted(attrs))}];")
 
     def emit_node(self, name, **props):
         """emit a node with given properties.
         node properties: see http://www.graphviz.org/doc/info/attrs.html
         """
-        attrs = ['%s="%s"' % (prop, value) for prop, value in props.items()]
-        self.emit("%s [%s];" % (normalize_node_id(name), ", ".join(sorted(attrs))))
+        attrs = [f'{prop}="{value}"' for prop, value in props.items()]
+        self.emit(f"{normalize_node_id(name)} [{', '.join(sorted(attrs))}];")
 
 
 def normalize_node_id(nid):
     """Returns a suitable DOT node id for `nid`."""
-    return '"%s"' % nid
+    return f'"{nid}"'
 
 
 class GraphGenerator:
@@ -223,7 +225,7 @@ def ordered_nodes(graph: _Graph) -> Tuple[V, ...]:
 
     if cycles:
         bad_cycles = "\n".join([" -> ".join(map(str, cycle)) for cycle in cycles])
-        raise UnorderableGraph("cycles in graph: %s" % bad_cycles)
+        raise UnorderableGraph(f"cycles in graph: {bad_cycles}")
 
     vertices = set(graph)
     to_vertices = set()
@@ -233,7 +235,7 @@ def ordered_nodes(graph: _Graph) -> Tuple[V, ...]:
 
     missing_vertices = to_vertices - vertices
     if missing_vertices:
-        raise UnorderableGraph("missing vertices: %s" % ", ".join(missing_vertices))
+        raise UnorderableGraph(f"missing vertices: {', '.join(missing_vertices)}")
 
     # order vertices
     order = []
@@ -242,7 +244,7 @@ def ordered_nodes(graph: _Graph) -> Tuple[V, ...]:
 
     while graph:
         if old_len == len(graph):
-            raise UnorderableGraph("unknown problem with %s" % graph)
+            raise UnorderableGraph(f"unknown problem with {graph}")
 
         old_len = len(graph)
         deps_ok = []

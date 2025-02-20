@@ -46,7 +46,7 @@ def proc_exists(pid):
     """check the a pid is registered in /proc
     raise NoSuchProcess exception if not
     """
-    if not os.path.exists("/proc/%s" % pid):
+    if not os.path.exists(f"/proc/{pid}"):
         raise NoSuchProcess()
 
 
@@ -65,14 +65,14 @@ class ProcInfo(Node):
         self.pid = int(pid)
         Node.__init__(self, self.pid)
         proc_exists(self.pid)
-        self.file = "/proc/%s/stat" % self.pid
+        self.file = f"/proc/{self.pid}/stat"
         self.ppid = int(self.status()[PPID])
 
     def memory_usage(self):
         """return the memory usage of the process in Ko"""
         try:
             return int(self.status()[VSIZE])
-        except IOError:
+        except OSError:
             return 0
 
     def lineage_memory_usage(self):

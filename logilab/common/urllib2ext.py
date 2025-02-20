@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import logging
 import urllib2
 
@@ -45,27 +43,27 @@ class HTTPGssapiAuthHandler(urllib2.BaseHandler):
                     req.get_full_url(), 401, "negotiate auth failed", headers, None
                 )
             self._retried += 1
-            logging.debug("gssapi handler, try %s" % self._retried)
+            logging.debug(f"gssapi handler, try {self._retried}")
             negotiate = get_negociate_value(headers)
             if negotiate is None:
                 logging.debug("no negociate found in a www-authenticate header")
                 return None
-            logging.debug("HTTPGssapiAuthHandler: negotiate 1 is %r" % negotiate)
-            result, self._context = krb.authGSSClientInit("HTTP@%s" % req.get_host())
+            logging.debug(f"HTTPGssapiAuthHandler: negotiate 1 is {negotiate!r}")
+            result, self._context = krb.authGSSClientInit(f"HTTP@{req.get_host()}")
             if result < 1:
                 raise GssapiAuthError("HTTPGssapiAuthHandler: init failed with %d" % result)
             result = krb.authGSSClientStep(self._context, negotiate)
             if result < 0:
                 raise GssapiAuthError("HTTPGssapiAuthHandler: step 1 failed with %d" % result)
             client_response = krb.authGSSClientResponse(self._context)
-            logging.debug("HTTPGssapiAuthHandler: client response is %s..." % client_response[:10])
-            req.add_unredirected_header("Authorization", "Negotiate %s" % client_response)
+            logging.debug(f"HTTPGssapiAuthHandler: client response is {client_response[:10]}...")
+            req.add_unredirected_header("Authorization", f"Negotiate {client_response}")
             server_response = self.parent.open(req)
             negotiate = get_negociate_value(server_response.info())
             if negotiate is None:
                 logging.warning("HTTPGssapiAuthHandler: failed to authenticate server")
             else:
-                logging.debug("HTTPGssapiAuthHandler negotiate 2: %s" % negotiate)
+                logging.debug(f"HTTPGssapiAuthHandler negotiate 2: {negotiate}")
                 result = krb.authGSSClientStep(self._context, negotiate)
                 if result < 1:
                     raise GssapiAuthError("HTTPGssapiAuthHandler: step 2 failed with %d" % result)
@@ -95,4 +93,4 @@ if __name__ == "__main__":
     # test with url sys.argv[1]
     h = HTTPGssapiAuthHandler()
     response = urllib2.build_opener(h, ch).open(sys.argv[1])
-    print("\nresponse: %s\n--------------\n" % response.code, response.info())
+    print(f"\nresponse: {response.code}\n--------------\n", response.info())

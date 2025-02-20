@@ -78,12 +78,13 @@ class DateTC(TestCase):
 
     def test_get_national_holidays(self):
         holidays = get_national_holidays
-        yield self.assertEqual, holidays(self.datecls(2008, 4, 29), self.datecls(2008, 5, 2)), [
-            self.datecls(2008, 5, 1)
-        ]
-        yield self.assertEqual, holidays(self.datecls(2008, 5, 7), self.datecls(2008, 5, 8)), []
+        self.assertEqual(
+            holidays(self.datecls(2008, 4, 29), self.datecls(2008, 5, 2)),
+            [self.datecls(2008, 5, 1)],
+        )
+        self.assertEqual(holidays(self.datecls(2008, 5, 7), self.datecls(2008, 5, 8)), [])
         x = self.datetimecls(2008, 5, 7, 12, 12, 12)
-        yield self.assertEqual, holidays(x, x + self.timedeltacls(days=1)), []
+        self.assertEqual(holidays(x, x + self.timedeltacls(days=1)), [])
 
     def test_open_days_now_and_before(self):
         nb = nb_open_days

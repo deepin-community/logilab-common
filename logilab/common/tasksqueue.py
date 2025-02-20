@@ -73,7 +73,7 @@ class PrioritizedTasksQueue(queue.Queue):
             if task.id == tid:
                 self.queue.pop(i)
                 return
-        raise ValueError("not task of id %s in queue" % tid)
+        raise ValueError(f"not task of id {tid} in queue")
 
 
 class Task:
