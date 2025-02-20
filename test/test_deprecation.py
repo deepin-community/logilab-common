@@ -31,7 +31,6 @@ CURRENT_FILE = os.path.abspath(__file__)
 
 
 class RawInputTC(TestCase):
-
     # XXX with 2.6 we could test warnings
     # http://docs.python.org/library/warnings.html#testing-warnings
     # instead we just make sure it does not crash
@@ -57,17 +56,35 @@ class RawInputTC(TestCase):
             pass
 
         AnyClass()
-        self.assertEqual(self.messages, ["[test_deprecation] AnyClass is deprecated"])
+
+        class AnyClass(object, metaclass=deprecation.class_deprecated):
+            __deprecation_warning_version__ = "1.2.3"
+
+        AnyClass()
+
+        self.assertEqual(
+            self.messages,
+            [
+                "[test_deprecation] AnyClass is deprecated",
+                "[test_deprecation 1.2.3] AnyClass is deprecated",
+            ],
+        )
 
     def test_class_renamed(self):
-        class AnyClass(object):
+        class AnyClass:
             pass
 
         OldClass = deprecation.class_renamed("OldClass", AnyClass)
-
         OldClass()
+        OldClass = deprecation.class_renamed("OldClass", AnyClass, version="1.2.3")
+        OldClass()
+
         self.assertEqual(
-            self.messages, ["[test_deprecation] OldClass is deprecated, use AnyClass instead"]
+            self.messages,
+            [
+                "[test_deprecation] OldClass is deprecated, use AnyClass instead",
+                "[test_deprecation 1.2.3] OldClass is deprecated, use AnyClass instead",
+            ],
         )
 
     def test_class_renamed_conflict_metaclass(self):
@@ -77,34 +94,44 @@ class RawInputTC(TestCase):
         class AnyClass(metaclass=SomeMetaClass):
             pass
 
-        # make sure the "metaclass conflict: the metaclass of a derived class # must be a
+        # make sure the "metaclass conflict: the metaclass of a derived class must be a
         # (non-strict) subclass of the metaclasses of all its bases" exception won't be raised
         deprecation.class_renamed("OldClass", AnyClass)
+        deprecation.class_renamed("OldClass", AnyClass, version="1.2.3")
 
     def test_class_moved(self):
-        class AnyClass(object):
+        class AnyClass:
             pass
 
         OldClass = deprecation.class_moved(new_class=AnyClass, old_name="OldName")
+        OldClass()
+        OldClass = deprecation.class_moved(new_class=AnyClass, old_name="OldName", version="1.2.3")
         OldClass()
         self.assertEqual(
             self.messages,
             [
                 "[test_deprecation] class test_deprecation.OldName is now available as "
-                "test_deprecation.AnyClass"
+                "test_deprecation.AnyClass",
+                "[test_deprecation 1.2.3] class test_deprecation.OldName is now available as "
+                "test_deprecation.AnyClass",
             ],
         )
 
         self.messages = []
 
-        AnyClass = deprecation.class_moved(new_class=AnyClass)
+        AnyClass2 = deprecation.class_moved(new_class=AnyClass)
+        AnyClass2()
 
-        AnyClass()
+        AnyClass3 = deprecation.class_moved(new_class=AnyClass, version="1.2.3")
+        AnyClass3()
+
         self.assertEqual(
             self.messages,
             [
                 "[test_deprecation] class test_deprecation.AnyClass is now available as "
-                "test_deprecation.AnyClass"
+                "test_deprecation.AnyClass",
+                "[test_deprecation 1.2.3] class test_deprecation.AnyClass is now available as "
+                "test_deprecation.AnyClass",
             ],
         )
 
@@ -113,11 +140,17 @@ class RawInputTC(TestCase):
         any_func()
         any_func = deprecation.callable_deprecated("message")(self.mk_func())
         any_func()
+        any_func = deprecation.callable_deprecated(version="1.2.3")(self.mk_func())
+        any_func()
+        any_func = deprecation.callable_deprecated("message", version="1.2.3")(self.mk_func())
+        any_func()
         self.assertEqual(
             self.messages,
             [
                 '[test_deprecation] The function "any_func" is deprecated',
                 "[test_deprecation] message",
+                '[test_deprecation 1.2.3] The function "any_func" is deprecated',
+                "[test_deprecation 1.2.3] message",
             ],
         )
 
@@ -133,21 +166,35 @@ class RawInputTC(TestCase):
             pass
 
         any_func()
+
+        @deprecation.callable_deprecated(version="1.2.3")
+        def any_func():
+            pass
+
+        any_func()
+
+        @deprecation.callable_deprecated("message", version="1.2.3")
+        def any_func():
+            pass
+
+        any_func()
         self.assertEqual(
             self.messages,
             [
                 '[test_deprecation] The function "any_func" is deprecated',
                 "[test_deprecation] message",
+                '[test_deprecation 1.2.3] The function "any_func" is deprecated',
+                "[test_deprecation 1.2.3] message",
             ],
         )
 
     def test_deprecated_decorator_bad_lazyobject(self):
         # this should not raised an ImportationError
-        deprecation.deprecated("foobar")(LazyObject("cubes.localperms", "xperm"))
+        deprecation.callable_deprecated("foobar")(LazyObject("cubes.localperms", "xperm"))
 
         # with or without giving it a message (because it shouldn't access
         # attributes of the wrapped object before the object is called)
-        deprecation.deprecated()(LazyObject("cubes.localperms", "xperm"))
+        deprecation.callable_deprecated()(LazyObject("cubes.localperms", "xperm"))
 
         # all of this is done because of the magical way LazyObject is working
         # and that sometime CW used to use it to do fake import on deprecated
@@ -206,6 +253,32 @@ class RawInputTC(TestCase):
         self.assertFalse(hasattr(some_class, "new"))
         self.assertFalse(hasattr(some_class, "old"))
 
+    def test_attribute_renamed_version(self):
+        @deprecation.attribute_renamed(old_name="old", new_name="new", version="1.2.3")
+        class SomeClass:
+            def __init__(self):
+                self.new = 42
+
+        some_class = SomeClass()
+        self.assertEqual(some_class.old, some_class.new)
+        self.assertEqual(
+            self.messages,
+            [
+                "[test_deprecation 1.2.3] SomeClass.old has been renamed and is deprecated, "
+                "use SomeClass.new instead"
+            ],
+        )
+
+        some_class.old = 43
+        self.assertEqual(some_class.old, 43)
+        self.assertEqual(some_class.old, some_class.new)
+
+        self.assertTrue(hasattr(some_class, "new"))
+        self.assertTrue(hasattr(some_class, "old"))
+        del some_class.old
+        self.assertFalse(hasattr(some_class, "new"))
+        self.assertFalse(hasattr(some_class, "old"))
+
     def test_argument_renamed(self):
         @deprecation.argument_renamed(old_name="old", new_name="new")
         def some_function(new):
@@ -218,6 +291,24 @@ class RawInputTC(TestCase):
             [
                 "[test_deprecation] argument old of callable some_function has been renamed and is "
                 "deprecated, use keyword argument new instead"
+            ],
+        )
+
+        with self.assertRaises(ValueError):
+            some_function(new=42, old=42)
+
+    def test_argument_renamed_version(self):
+        @deprecation.argument_renamed(old_name="old", new_name="new", version="1.2.3")
+        def some_function(new):
+            return new
+
+        self.assertEqual(some_function(new=42), 42)
+        self.assertEqual(some_function(old=42), 42)
+        self.assertEqual(
+            self.messages,
+            [
+                "[test_deprecation 1.2.3] argument old of callable some_function has been renamed "
+                "and is deprecated, use keyword argument new instead"
             ],
         )
 
@@ -239,6 +330,21 @@ class RawInputTC(TestCase):
             ],
         )
 
+    def test_argument_removed_version(self):
+        @deprecation.argument_removed("old", version="1.2.3")
+        def some_function(new):
+            return new
+
+        self.assertEqual(some_function(new=42), 42)
+        self.assertEqual(some_function(new=10, old=20), 10)
+        self.assertEqual(
+            self.messages,
+            [
+                "[test_deprecation 1.2.3] argument old of callable some_function has been removed "
+                "and is deprecated"
+            ],
+        )
+
     def test_callable_renamed(self):
         def any_func():
             pass
@@ -254,6 +360,21 @@ class RawInputTC(TestCase):
             ],
         )
 
+    def test_callable_renamed_version(self):
+        def any_func():
+            pass
+
+        old_func = deprecation.callable_renamed("old_func", any_func, version="1.2.3")
+        old_func()
+
+        self.assertEqual(
+            self.messages,
+            [
+                "[test_deprecation 1.2.3] old_func has been renamed and is deprecated, "
+                "uses any_func instead"
+            ],
+        )
+
     def test_callable_moved(self):
         module = "data.deprecation"
         moving_target = deprecation.callable_moved(module, "moving_target")
@@ -262,6 +383,18 @@ class RawInputTC(TestCase):
             self.messages,
             [
                 "[test_deprecation] object test_deprecation.moving_target has been moved to "
+                "data.deprecation.moving_target"
+            ],
+        )
+
+    def test_callable_moved_version(self):
+        module = "data.deprecation"
+        moving_target = deprecation.callable_moved(module, "moving_target", version="1.2.3")
+        moving_target()
+        self.assertEqual(
+            self.messages,
+            [
+                "[test_deprecation 1.2.3] object test_deprecation.moving_target has been moved to "
                 "data.deprecation.moving_target"
             ],
         )
@@ -294,6 +427,21 @@ class StructuredDeprecatedWarningsTest(TestCase):
 
         self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.DEPRECATED)
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CLASS)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
+
+    def test_class_deprecated_version(self):
+        class AnyClass(metaclass=deprecation.class_deprecated):
+            __deprecation_warning_version__ = "1.2.3"
+
+        AnyClass()
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.DEPRECATED)
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CLASS)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
 
     def test_class_renamed(self):
         class AnyClass:
@@ -309,6 +457,25 @@ class StructuredDeprecatedWarningsTest(TestCase):
         self.assertEqual(warning.old_name, "OldClass")
         self.assertEqual(warning.new_name, "AnyClass")
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CLASS)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
+
+    def test_class_renamed_version(self):
+        class AnyClass:
+            pass
+
+        OldClass = deprecation.class_renamed("OldClass", AnyClass, version="1.2.3")
+
+        OldClass()
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.RENAMED)
+        self.assertEqual(warning.old_name, "OldClass")
+        self.assertEqual(warning.new_name, "AnyClass")
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CLASS)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
 
     def test_class_moved(self):
         class AnyClass:
@@ -326,6 +493,8 @@ class StructuredDeprecatedWarningsTest(TestCase):
         self.assertEqual(warning.old_name, "OldName")
         self.assertEqual(warning.new_name, "AnyClass")
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CLASS)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
 
         self.collected_warnings = []
 
@@ -342,6 +511,45 @@ class StructuredDeprecatedWarningsTest(TestCase):
         self.assertEqual(warning.old_name, "AnyClass")
         self.assertEqual(warning.new_name, "AnyClass")
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CLASS)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
+
+    def test_class_moved_version(self):
+        class AnyClass:
+            pass
+
+        OldClass = deprecation.class_moved(new_class=AnyClass, old_name="OldName", version="1.2.3")
+        OldClass()
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.MOVED)
+        self.assertEqual(warning.old_module, "test_deprecation")
+        self.assertEqual(warning.new_module, "test_deprecation")
+        self.assertEqual(warning.old_name, "OldName")
+        self.assertEqual(warning.new_name, "AnyClass")
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CLASS)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
+
+        self.collected_warnings = []
+
+        AnyClass = deprecation.class_moved(new_class=AnyClass, version="1.2.3")
+
+        AnyClass()
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.MOVED)
+        self.assertEqual(warning.old_module, "test_deprecation")
+        self.assertEqual(warning.new_module, "test_deprecation")
+        self.assertEqual(warning.old_name, "AnyClass")
+        self.assertEqual(warning.new_name, "AnyClass")
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CLASS)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
 
     def test_deprecated_func(self):
         any_func = deprecation.callable_deprecated()(self.mk_func())
@@ -352,6 +560,8 @@ class StructuredDeprecatedWarningsTest(TestCase):
 
         self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.DEPRECATED)
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
 
         any_func = deprecation.callable_deprecated("message")(self.mk_func())
         any_func()
@@ -361,6 +571,31 @@ class StructuredDeprecatedWarningsTest(TestCase):
 
         self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.DEPRECATED)
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
+
+    def test_deprecated_func_version(self):
+        any_func = deprecation.callable_deprecated(version="1.2.3")(self.mk_func())
+        any_func()
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.DEPRECATED)
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
+
+        any_func = deprecation.callable_deprecated("message", version="1.2.3")(self.mk_func())
+        any_func()
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.DEPRECATED)
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
 
     def test_deprecated_decorator(self):
         @deprecation.callable_deprecated()
@@ -374,6 +609,8 @@ class StructuredDeprecatedWarningsTest(TestCase):
 
         self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.DEPRECATED)
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
 
         @deprecation.callable_deprecated("message")
         def any_func():
@@ -386,6 +623,37 @@ class StructuredDeprecatedWarningsTest(TestCase):
 
         self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.DEPRECATED)
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
+
+    def test_deprecated_decorator_version(self):
+        @deprecation.callable_deprecated(version="1.2.3")
+        def any_func():
+            pass
+
+        any_func()
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.DEPRECATED)
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
+
+        @deprecation.callable_deprecated("message", version="1.2.3")
+        def any_func():
+            pass
+
+        any_func()
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.DEPRECATED)
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
 
     def test_attribute_renamed(self):
         @deprecation.attribute_renamed(old_name="old", new_name="new")
@@ -404,6 +672,8 @@ class StructuredDeprecatedWarningsTest(TestCase):
         self.assertEqual(warning.old_name, "old")
         self.assertEqual(warning.new_name, "new")
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.ATTRIBUTE)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
 
         some_class.old = 43
 
@@ -414,6 +684,8 @@ class StructuredDeprecatedWarningsTest(TestCase):
         self.assertEqual(warning.old_name, "old")
         self.assertEqual(warning.new_name, "new")
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.ATTRIBUTE)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
 
         del some_class.old
 
@@ -424,6 +696,52 @@ class StructuredDeprecatedWarningsTest(TestCase):
         self.assertEqual(warning.old_name, "old")
         self.assertEqual(warning.new_name, "new")
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.ATTRIBUTE)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
+
+    def test_attribute_renamed_version(self):
+        @deprecation.attribute_renamed(old_name="old", new_name="new", version="1.2.3")
+        class SomeClass:
+            def __init__(self):
+                self.new = 42
+
+        some_class = SomeClass()
+
+        some_class.old == some_class.new  # trigger warning
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.RENAMED)
+        self.assertEqual(warning.old_name, "old")
+        self.assertEqual(warning.new_name, "new")
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.ATTRIBUTE)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
+
+        some_class.old = 43
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.RENAMED)
+        self.assertEqual(warning.old_name, "old")
+        self.assertEqual(warning.new_name, "new")
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.ATTRIBUTE)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
+
+        del some_class.old
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.RENAMED)
+        self.assertEqual(warning.old_name, "old")
+        self.assertEqual(warning.new_name, "new")
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.ATTRIBUTE)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
 
     def test_argument_renamed(self):
         @deprecation.argument_renamed(old_name="old", new_name="new")
@@ -439,6 +757,25 @@ class StructuredDeprecatedWarningsTest(TestCase):
         self.assertEqual(warning.old_name, "old")
         self.assertEqual(warning.new_name, "new")
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.ARGUMENT)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
+
+    def test_argument_renamed_version(self):
+        @deprecation.argument_renamed(old_name="old", new_name="new", version="1.2.3")
+        def some_function(new):
+            return new
+
+        some_function(old=42)
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.RENAMED)
+        self.assertEqual(warning.old_name, "old")
+        self.assertEqual(warning.new_name, "new")
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.ARGUMENT)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
 
     def test_argument_removed(self):
         @deprecation.argument_removed("old")
@@ -453,6 +790,24 @@ class StructuredDeprecatedWarningsTest(TestCase):
         self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.REMOVED)
         self.assertEqual(warning.name, "old")
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.ARGUMENT)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
+
+    def test_argument_removed_version(self):
+        @deprecation.argument_removed("old", version="1.2.3")
+        def some_function(new):
+            return new
+
+        some_function(new=10, old=20)
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.REMOVED)
+        self.assertEqual(warning.name, "old")
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.ARGUMENT)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
 
     def test_callable_renamed(self):
         def any_func():
@@ -468,6 +823,25 @@ class StructuredDeprecatedWarningsTest(TestCase):
         self.assertEqual(warning.old_name, "old_func")
         self.assertEqual(warning.new_name, "any_func")
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
+
+    def test_callable_renamed_version(self):
+        def any_func():
+            pass
+
+        old_func = deprecation.callable_renamed("old_func", any_func, version="1.2.3")
+        old_func()
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.RENAMED)
+        self.assertEqual(warning.old_name, "old_func")
+        self.assertEqual(warning.new_name, "any_func")
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
 
     def test_callable_moved(self):
         module = "data.deprecation"
@@ -483,6 +857,25 @@ class StructuredDeprecatedWarningsTest(TestCase):
         self.assertEqual(warning.old_name, "moving_target")
         self.assertEqual(warning.new_name, "moving_target")
         self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, None)
+        self.assertEqual(warning.package, "logilab-common")
+
+    def test_callable_moved_version(self):
+        module = "data.deprecation"
+        moving_target = deprecation.callable_moved(module, "moving_target", version="1.2.3")
+        moving_target()
+
+        self.assertEqual(len(self.collected_warnings), 1)
+        warning = self.collected_warnings.pop()
+
+        self.assertEqual(warning.operation, deprecation.DeprecationWarningOperation.MOVED)
+        self.assertEqual(warning.old_module, "test_deprecation")
+        self.assertEqual(warning.new_module, "data.deprecation")
+        self.assertEqual(warning.old_name, "moving_target")
+        self.assertEqual(warning.new_name, "moving_target")
+        self.assertEqual(warning.kind, deprecation.DeprecationWarningKind.CALLABLE)
+        self.assertEqual(warning.version, "1.2.3")
+        self.assertEqual(warning.package, "logilab-common")
 
 
 class DeprecatedWarningsTracebackLocationTest(TestCase):

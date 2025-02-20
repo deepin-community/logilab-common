@@ -17,7 +17,6 @@
 # along with logilab-common.  If not, see <http://www.gnu.org/licenses/>.
 """Text formatting drivers for ureports"""
 
-from __future__ import print_function
 from typing import Any, List, Tuple
 
 __docformat__ = "restructuredtext en"
@@ -58,7 +57,7 @@ class TextWriter(BaseWriter):
         if self.pending_urls:
             self.writeln()
             for label, url in self.pending_urls:
-                self.writeln(".. _`%s`: %s" % (label, url))
+                self.writeln(f".. _`{label}`: {url}")
             self.pending_urls = []
         self.section -= 1
         self.writeln()
@@ -137,14 +136,14 @@ class TextWriter(BaseWriter):
         indent = "  " * self.list_level
         self.list_level += 1
         for child in layout.children:
-            self.write("%s%s%s " % (linesep, indent, bullet))
+            self.write(f"{linesep}{indent}{bullet} ")
             child.accept(self)
         self.list_level -= 1
 
     def visit_link(self, layout: Link) -> None:
         """add a hyperlink"""
         if layout.label != layout.url:
-            self.write("`%s`_" % layout.label)
+            self.write(f"`{layout.label}`_")
             self.pending_urls.append((layout.label, layout.url))
         else:
             self.write(layout.url)
@@ -158,4 +157,4 @@ class TextWriter(BaseWriter):
 
     def visit_text(self, layout: Text) -> None:
         """add some text"""
-        self.write("%s" % layout.data)
+        self.write(f"{layout.data}")

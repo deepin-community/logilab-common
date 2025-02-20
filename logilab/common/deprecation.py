@@ -21,14 +21,32 @@ __docformat__ = "restructuredtext en"
 
 import os
 import sys
+import inspect
 from enum import Enum
 from warnings import warn
 from functools import WRAPPER_ASSIGNMENTS, WRAPPER_UPDATES
+from importlib import import_module
+
 from typing import Any, Callable, Dict, Optional, Type
 from typing_extensions import Protocol
 
+if sys.version_info >= (3, 8):
+    from importlib import metadata as importlib_metadata
+else:
+    import importlib_metadata
 
-def get_real__name__(some_callable: Callable) -> str:
+
+class FakeDistribution(importlib_metadata.Distribution):
+    "see https://github.com/python/importlib_metadata/blob/main/CHANGES.rst#v600"
+
+    def locate_file(self):
+        pass
+
+    def read_text(self):
+        pass
+
+
+def _unstack_all_deprecation_decorators(function):
     """
     This is another super edge magic case which is needed because we uses
     lazy_wraps because of logilab.common.modutils.LazyObject and because
@@ -38,12 +56,18 @@ def get_real__name__(some_callable: Callable) -> str:
     Therefor, to get the real callable name when several lazy_wrapped
     decorator are used we need to travers the __wrapped__ attributes chain.
     """
+    while hasattr(function, "__wrapped__"):
+        function = function.__wrapped__
 
-    targeted_callable = some_callable
-    while hasattr(targeted_callable, "__wrapped__"):
-        targeted_callable = targeted_callable.__wrapped__  # type: ignore
+    return function
 
-    return targeted_callable.__name__
+
+def get_real__name__(some_callable: Callable) -> str:
+    return _unstack_all_deprecation_decorators(some_callable).__name__
+
+
+def get_real__module__(some_callable: Callable) -> str:
+    return _unstack_all_deprecation_decorators(some_callable).__module__
 
 
 def lazy_wraps(wrapped: Callable) -> Callable:
@@ -84,7 +108,7 @@ def lazy_wraps(wrapped: Callable) -> Callable:
     return update_wrapper_attributes
 
 
-class DeprecationWrapper(object):
+class DeprecationWrapper:
     """proxy to print a warning on access to any attribute of the wrapped object"""
 
     def __init__(
@@ -145,6 +169,42 @@ def _get_module_name(number: int = 1) -> str:
     return file_name
 
 
+_cached_path_to_package: Optional[Dict[str, Optional[str]]] = None
+
+
+def _get_package_name(python_object) -> Optional[str]:
+    # only do this work if we are in a pytest session
+    if "COLLECT_DEPRECATION_WARNINGS_PACKAGE_NAME" not in os.environ:
+        return None
+
+    global _cached_path_to_package
+
+    if _cached_path_to_package is None:
+        _cached_path_to_package = {}
+        # mypy fails to understand the result of .discover(): Cannot
+        # instantiate abstract class 'Distribution' with abstract attributes
+        # 'locate_file' and 'read_text'
+        for distribution in FakeDistribution().discover():  # type: ignore
+            # sometime distribution has a "name" attribute, sometime not
+            if distribution.files and hasattr(distribution, "name"):
+                for file in distribution.files:
+                    _cached_path_to_package[str(distribution.locate_file(file))] = distribution.name
+                continue
+
+            if distribution.files and "name" in distribution.metadata:
+                for file in distribution.files:
+                    _cached_path_to_package[
+                        str(distribution.locate_file(file))
+                    ] = distribution.metadata["name"]
+
+    try:
+        return _cached_path_to_package.get(
+            inspect.getfile(_unstack_all_deprecation_decorators(python_object))
+        )
+    except TypeError:
+        return None
+
+
 def send_warning(
     reason: str,
     deprecation_class: Type[DeprecationWarning],
@@ -157,11 +217,11 @@ def send_warning(
     compatible version.
     """
     if module_name and version:
-        reason = "[%s %s] %s" % (module_name, version, reason)
+        reason = f"[{module_name} {version}] {reason}"
     elif module_name:
-        reason = "[%s] %s" % (module_name, reason)
+        reason = f"[{module_name}] {reason}"
     elif version:
-        reason = "[%s] %s" % (version, reason)
+        reason = f"[{version}] {reason}"
 
     warn(
         deprecation_class(reason, **deprecation_class_kwargs), stacklevel=stacklevel  # type: ignore
@@ -189,16 +249,26 @@ class StructuredDeprecationWarning(DeprecationWarning):
     Mostly used with isinstance
     """
 
-    def __init__(self, reason: str):
+    def __init__(self, reason: str, package: str = None, version: str = None):
         self.reason: str = reason
+        self.package = package
+        self.version = version
 
     def __str__(self) -> str:
         return self.reason
 
 
 class TargetRenamedDeprecationWarning(StructuredDeprecationWarning):
-    def __init__(self, reason: str, kind: DeprecationWarningKind, old_name: str, new_name: str):
-        super().__init__(reason)
+    def __init__(
+        self,
+        reason: str,
+        kind: DeprecationWarningKind,
+        old_name: str,
+        new_name: str,
+        package: str = None,
+        version: str = None,
+    ):
+        super().__init__(reason, package=package, version=version)
         self.operation = DeprecationWarningOperation.RENAMED
         self.kind: DeprecationWarningKind = kind  # callable, class, module, argument, attribute
         self.old_name: str = old_name
@@ -206,15 +276,24 @@ class TargetRenamedDeprecationWarning(StructuredDeprecationWarning):
 
 
 class TargetDeprecatedDeprecationWarning(StructuredDeprecationWarning):
-    def __init__(self, reason: str, kind: DeprecationWarningKind):
-        super().__init__(reason)
+    def __init__(
+        self, reason: str, kind: DeprecationWarningKind, package: str = None, version: str = None
+    ):
+        super().__init__(reason, package=package, version=version)
         self.operation = DeprecationWarningOperation.DEPRECATED
         self.kind: DeprecationWarningKind = kind  # callable, class, module, argument, attribute
 
 
 class TargetRemovedDeprecationWarning(StructuredDeprecationWarning):
-    def __init__(self, reason: str, kind: DeprecationWarningKind, name: str):
-        super().__init__(reason)
+    def __init__(
+        self,
+        reason: str,
+        kind: DeprecationWarningKind,
+        name: str,
+        package: str = None,
+        version: str = None,
+    ):
+        super().__init__(reason, package=package, version=version)
         self.operation = DeprecationWarningOperation.REMOVED
         self.kind: DeprecationWarningKind = kind  # callable, class, module, argument, attribute
         self.name: str = name
@@ -229,8 +308,10 @@ class TargetMovedDeprecationWarning(StructuredDeprecationWarning):
         new_name: str,
         old_module: str,
         new_module: str,
+        package: str = None,
+        version: str = None,
     ):
-        super().__init__(reason)
+        super().__init__(reason, package=package, version=version)
         self.operation = DeprecationWarningOperation.MOVED
         self.kind: DeprecationWarningKind = kind  # callable, class, module, argument, attribute
         self.old_name: str = old_name
@@ -266,19 +347,16 @@ def callable_renamed(
                 "kind": DeprecationWarningKind.CALLABLE,
                 "old_name": old_name,
                 "new_name": get_real__name__(new_function),
+                "version": version,
+                "package": _get_package_name(new_function),
             },
             stacklevel=3,
             version=version,
-            module_name=new_function.__module__,
+            module_name=get_real__module__(new_function),
         )
         return new_function(*args, **kwargs)
 
     return wrapped
-
-
-renamed: Callable[[str, Callable, Optional[str]], Callable] = callable_renamed(
-    old_name="renamed", new_function=callable_renamed
-)
 
 
 def argument_removed(old_argument_name: str, version: Optional[str] = None) -> Callable:
@@ -305,10 +383,12 @@ def argument_removed(old_argument_name: str, version: Optional[str] = None) -> C
                     deprecation_class_kwargs={
                         "kind": DeprecationWarningKind.ARGUMENT,
                         "name": old_argument_name,
+                        "version": version,
+                        "package": _get_package_name(func),
                     },
                     stacklevel=3,
                     version=version,
-                    module_name=func.__module__,
+                    module_name=get_real__module__(func),
                 )
                 del kwargs[old_argument_name]
 
@@ -319,8 +399,6 @@ def argument_removed(old_argument_name: str, version: Optional[str] = None) -> C
     return _wrap
 
 
-@argument_removed("name")
-@argument_removed("doc")
 def callable_deprecated(
     reason: Optional[str] = None, version: Optional[str] = None, stacklevel: int = 2
 ) -> Callable:
@@ -337,11 +415,15 @@ def callable_deprecated(
 
             send_warning(
                 message,
-                TargetDeprecatedDeprecationWarning,
-                {"kind": DeprecationWarningKind.CALLABLE},
-                version,
-                stacklevel + 1,
-                module_name=func.__module__,
+                deprecation_class=TargetDeprecatedDeprecationWarning,
+                deprecation_class_kwargs={
+                    "kind": DeprecationWarningKind.CALLABLE,
+                    "version": version,
+                    "package": _get_package_name(func),
+                },
+                version=version,
+                stacklevel=stacklevel + 1,
+                module_name=get_real__module__(func),
             )
             return func(*args, **kwargs)
 
@@ -357,18 +439,13 @@ class CallableDeprecatedCallable(Protocol):
         ...
 
 
-deprecated: CallableDeprecatedCallable = callable_renamed(
-    old_name="deprecated", new_function=callable_deprecated
-)
-
-
 def _generate_class_deprecated():
     class _class_deprecated(type):
         """metaclass to print a warning on instantiation of a deprecated class"""
 
         def __call__(cls, *args, **kwargs):
             message = getattr(cls, "__deprecation_warning__", "%(cls)s is deprecated") % {
-                "cls": cls.__name__
+                "cls": get_real__name__(cls)
             }
             send_warning(
                 message,
@@ -378,7 +455,11 @@ def _generate_class_deprecated():
                 deprecation_class_kwargs=getattr(
                     cls,
                     "__deprecation_warning_class_kwargs__",
-                    {"kind": DeprecationWarningKind.CLASS},
+                    {
+                        "kind": DeprecationWarningKind.CLASS,
+                        "package": _get_package_name(cls),
+                        "version": getattr(cls, "__deprecation_warning_version__", None),
+                    },
                 ),
                 module_name=getattr(
                     cls, "__deprecation_warning_module_name__", _get_module_name(1)
@@ -419,8 +500,8 @@ def attribute_renamed(old_name: str, new_name: str, version: Optional[str] = Non
 
     def _class_wrap(klass: type) -> type:
         reason = (
-            f"{klass.__name__}.{old_name} has been renamed and is deprecated, use "
-            f"{klass.__name__}.{new_name} instead"
+            f"{get_real__name__(klass)}.{old_name} has been renamed and is deprecated, use "
+            f"{get_real__name__(klass)}.{new_name} instead"
         )
 
         def _get_old(self) -> Any:
@@ -431,10 +512,12 @@ def attribute_renamed(old_name: str, new_name: str, version: Optional[str] = Non
                     "kind": DeprecationWarningKind.ATTRIBUTE,
                     "old_name": old_name,
                     "new_name": new_name,
+                    "version": version,
+                    "package": _get_package_name(klass),
                 },
                 stacklevel=3,
                 version=version,
-                module_name=klass.__module__,
+                module_name=get_real__module__(klass),
             )
             return getattr(self, new_name)
 
@@ -446,10 +529,12 @@ def attribute_renamed(old_name: str, new_name: str, version: Optional[str] = Non
                     "kind": DeprecationWarningKind.ATTRIBUTE,
                     "old_name": old_name,
                     "new_name": new_name,
+                    "version": version,
+                    "package": _get_package_name(klass),
                 },
                 stacklevel=3,
                 version=version,
-                module_name=klass.__module__,
+                module_name=get_real__module__(klass),
             )
             setattr(self, new_name, value)
 
@@ -461,10 +546,12 @@ def attribute_renamed(old_name: str, new_name: str, version: Optional[str] = Non
                     "kind": DeprecationWarningKind.ATTRIBUTE,
                     "old_name": old_name,
                     "new_name": new_name,
+                    "version": version,
+                    "package": _get_package_name(klass),
                 },
                 stacklevel=3,
                 version=version,
-                module_name=klass.__module__,
+                module_name=get_real__module__(klass),
             )
             delattr(self, new_name)
 
@@ -508,10 +595,12 @@ def argument_renamed(old_name: str, new_name: str, version: Optional[str] = None
                         "kind": DeprecationWarningKind.ARGUMENT,
                         "old_name": old_name,
                         "new_name": new_name,
+                        "version": version,
+                        "package": _get_package_name(func),
                     },
                     stacklevel=3,
                     version=version,
-                    module_name=func.__module__,
+                    module_name=get_real__module__(func),
                 )
                 kwargs[new_name] = kwargs[old_name]
                 del kwargs[old_name]
@@ -523,8 +612,6 @@ def argument_renamed(old_name: str, new_name: str, version: Optional[str] = None
     return _wrap
 
 
-@argument_renamed(old_name="modpath", new_name="module_path")
-@argument_renamed(old_name="objname", new_name="object_name")
 def callable_moved(
     module_name: str,
     object_name: str,
@@ -544,7 +631,7 @@ def callable_moved(
     """
     # in case the callable has been renamed
     new_name = new_name if new_name is not None else object_name
-    old_module = _get_module_name(3)
+    old_module = _get_module_name(1)
 
     message = "object %s.%s has been moved to %s.%s" % (
         old_module,
@@ -554,7 +641,7 @@ def callable_moved(
     )
 
     def callnew(*args, **kwargs):
-        from logilab.common.modutils import load_module_from_name
+        m = import_module(module_name)
 
         send_warning(
             message,
@@ -565,21 +652,17 @@ def callable_moved(
                 "new_name": new_name,
                 "old_module": old_module,
                 "new_module": module_name,
+                "version": version,
+                "package": _get_package_name(getattr(m, object_name)),
             },
             version=version,
             stacklevel=stacklevel + 1,
             module_name=old_module,
         )
 
-        m = load_module_from_name(module_name)
         return getattr(m, object_name)(*args, **kwargs)
 
     return callnew
-
-
-moved: Callable[[Optional[str], Optional[str], int], Callable] = callable_renamed(
-    old_name="moved", new_function=callable_moved
-)
 
 
 def class_renamed(
@@ -602,7 +685,7 @@ def class_renamed(
     """
     class_dict: Dict[str, Any] = {}
     if message is None:
-        message = "%s is deprecated, use %s instead" % (old_name, new_class.__name__)
+        message = f"{old_name} is deprecated, use {get_real__name__(new_class)} instead"
 
     class_dict["__deprecation_warning__"] = message
     class_dict["__deprecation_warning_class__"] = deprecated_warning_class
@@ -610,7 +693,9 @@ def class_renamed(
         class_dict["__deprecation_warning_class_kwargs__"] = {
             "kind": DeprecationWarningKind.CLASS,
             "old_name": old_name,
-            "new_name": new_class.__name__,
+            "new_name": get_real__name__(new_class),
+            "version": version,
+            "package": _get_package_name(new_class),
         }
     else:
         class_dict["__deprecation_warning_class_kwargs__"] = deprecated_warning_kwargs
@@ -631,7 +716,7 @@ def class_renamed(
             def __init__(self, *args, **kwargs):
                 msg = class_dict.get(
                     "__deprecation_warning__",
-                    f"{old_name} is deprecated, use {new_class.__name__} instead",
+                    f"{old_name} is deprecated, use {get_real__name__(new_class)} instead",
                 )
                 send_warning(
                     msg,
@@ -639,7 +724,9 @@ def class_renamed(
                     deprecation_class_kwargs={
                         "kind": DeprecationWarningKind.CLASS,
                         "old_name": old_name,
-                        "new_name": new_class.__name__,
+                        "new_name": get_real__name__(new_class),
+                        "version": version,
+                        "package": _get_package_name(new_class),
                     },
                     stacklevel=class_dict.get("__deprecation_warning_stacklevel__", 3),
                     version=class_dict.get("__deprecation_warning_version__", None),
@@ -659,7 +746,7 @@ def class_moved(
     another module
     """
     if old_name is None:
-        old_name = new_class.__name__
+        old_name = get_real__name__(new_class)
 
     old_module = _get_module_name(1)
 
@@ -667,8 +754,8 @@ def class_moved(
         message = "class %s.%s is now available as %s.%s" % (
             old_module,
             old_name,
-            new_class.__module__,
-            new_class.__name__,
+            get_real__module__(new_class),
+            get_real__name__(new_class),
         )
 
     module_name = _get_module_name(1)
@@ -677,13 +764,16 @@ def class_moved(
         old_name,
         new_class,
         message=message,
+        version=version,
         module_name=module_name,
         deprecated_warning_class=TargetMovedDeprecationWarning,
         deprecated_warning_kwargs={
             "kind": DeprecationWarningKind.CLASS,
             "old_module": old_module,
-            "new_module": new_class.__module__,
+            "new_module": get_real__module__(new_class),
             "old_name": old_name,
-            "new_name": new_class.__name__,
+            "new_name": get_real__name__(new_class),
+            "version": version,
+            "package": _get_package_name(new_class),
         },
     )

@@ -19,7 +19,6 @@
 scripts.
 """
 
-from __future__ import print_function
 
 __docformat__ = "restructuredtext en"
 
@@ -31,17 +30,15 @@ import tempfile
 import fnmatch
 import string
 import random
-import subprocess
 import warnings
 from os.path import exists, isdir, islink, basename, join
 from _io import StringIO
 from typing import Any, Callable, Optional, List, Union, Iterator, Tuple
 
 from logilab.common import STD_BLACKLIST, _handle_blacklist
-from logilab.common.deprecation import callable_deprecated
 
 
-class tempdir(object):
+class tempdir:
     def __enter__(self):
         self.path = tempfile.mkdtemp()
         return self.path
@@ -52,7 +49,7 @@ class tempdir(object):
         return traceback is None
 
 
-class pushd(object):
+class pushd:
     def __init__(self, directory):
         self.directory = directory
 
@@ -103,13 +100,13 @@ def mv(source, destination, _action=shutil.move):
         try:
             source = sources[0]
         except IndexError:
-            raise OSError("No file matching %s" % source)
+            raise OSError(f"No file matching {source}")
         if isdir(destination) and exists(destination):
             destination = join(destination, basename(source))
         try:
             _action(source, destination)
         except OSError as ex:
-            raise OSError("Unable to move %r to %r (%s)" % (source, destination, ex))
+            raise OSError(f"Unable to move {source!r} to {destination!r} ({ex})")
 
 
 def rm(*files):
@@ -235,28 +232,16 @@ def unzip(archive, destdir):
             outfile.close()
 
 
-@callable_deprecated("Use subprocess.Popen instead")
-class Execute:
-    """This is a deadlock safe version of popen2 (no stdin), that returns
-    an object with errorlevel, out and err.
-    """
-
-    def __init__(self, command):
-        cmd = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.out, self.err = cmd.communicate()
-        self.status = os.WEXITSTATUS(cmd.returncode)
-
-
-class ProgressBar(object):
+class ProgressBar:
     """A simple text progression bar."""
 
     def __init__(
         self, nbops: int, size: int = 20, stream: StringIO = sys.stdout, title: str = ""
     ) -> None:
         if title:
-            self._fstr = "\r%s [%%-%ss]" % (title, int(size))
+            self._fstr = f"\r{title} [%-{int(size)}s]"
         else:
-            self._fstr = "\r[%%-%ss]" % int(size)
+            self._fstr = f"\r[%-{int(size)}s]"
         self._stream = stream
         self._total = nbops
         self._size = size
@@ -316,7 +301,7 @@ class ProgressBar(object):
         self._stream.flush()
 
 
-class DummyProgressBar(object):
+class DummyProgressBar:
     __slots__ = ("text",)
 
     def refresh(self):
@@ -332,7 +317,7 @@ class DummyProgressBar(object):
 _MARKER = object()
 
 
-class progress(object):
+class progress:
     def __init__(self, nbops=_MARKER, size=_MARKER, stream=_MARKER, title=_MARKER, enabled=True):
         self.nbops = nbops
         self.size = size
@@ -356,7 +341,7 @@ class progress(object):
         self.pb.finish()
 
 
-class RawInput(object):
+class RawInput:
     def __init__(
         self,
         input_function: Optional[Callable] = None,
@@ -381,9 +366,9 @@ class RawInput(object):
             else:
                 label = option[0].lower()
             if len(option) > 1:
-                label += "(%s)" % option[1:].lower()
+                label += f"({option[1:].lower()})"
             choices.append((option, label))
-        prompt = "%s [%s]: " % (question, "/".join([opt[1] for opt in choices]))
+        prompt = f"{question} [{'/'.join([opt[1] for opt in choices])}]: "
         tries = 3
         while tries > 0:
             answer = self._input(prompt).strip().lower()
@@ -393,7 +378,7 @@ class RawInput(object):
             if len(possible) == 1:
                 return possible[0]
             elif len(possible) == 0:
-                msg = "%s is not an option." % answer
+                msg = f"{answer} is not an option."
             else:
                 msg = "%s is an ambiguous answer, do you mean %s ?" % (
                     answer,

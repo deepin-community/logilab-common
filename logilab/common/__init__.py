@@ -28,10 +28,15 @@ __docformat__ = "restructuredtext en"
 
 import sys
 import types
-import pkg_resources
+
+if sys.version_info < (3, 10):
+    from importlib_metadata import version
+else:
+    from importlib.metadata import version
+
 from typing import List, Sequence
 
-__version__ = pkg_resources.get_distribution("logilab-common").version
+__version__ = version("logilab-common")
 
 # deprecated, but keep compatibility with pylint < 1.4.4
 __pkginfo__ = types.ModuleType("__pkginfo__")
@@ -71,7 +76,7 @@ class dictattr(dict):
             raise KeyError(attr)
 
 
-class nullobject(object):
+class nullobject:
     def __repr__(self):
         return "<nullobject>"
 
@@ -81,7 +86,7 @@ class nullobject(object):
     __nonzero__ = __bool__
 
 
-class tempattr(object):
+class tempattr:
     def __init__(self, obj, attr, value):
         self.obj = obj
         self.attr = attr

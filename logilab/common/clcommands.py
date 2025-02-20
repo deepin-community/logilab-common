@@ -22,7 +22,6 @@ e.g called as "tool command [options] args..." where <options> and <args> are
 command'specific
 """
 
-from __future__ import print_function
 
 __docformat__ = "restructuredtext en"
 
@@ -32,7 +31,6 @@ from os.path import basename
 
 from logilab.common.configuration import Configuration
 from logilab.common.logging_ext import init_log, get_threshold
-from logilab.common.deprecation import deprecated
 
 
 class BadCommandUsage(Exception):
@@ -103,9 +101,9 @@ class CommandLine(dict):
 
     def register(self, cls, force=False):
         """register the given :class:`Command` subclass"""
-        assert not self.check_duplicated_command or force or cls.name not in self, (
-            "a command %s is already defined" % cls.name
-        )
+        assert (
+            not self.check_duplicated_command or force or cls.name not in self
+        ), f"a command {cls.name} is already defined"
         self[cls.name] = cls
         return cls
 
@@ -142,7 +140,7 @@ class CommandLine(dict):
         try:
             command = self.get_command(arg)
         except KeyError:
-            print("ERROR: no %s command" % arg)
+            print(f"ERROR: no {arg} command")
             print()
             self.usage_and_exit(1)
         try:
@@ -150,7 +148,7 @@ class CommandLine(dict):
         except KeyboardInterrupt as exc:
             print("Interrupted", end=" ")
             if str(exc):
-                print(": %s" % exc, end=" ")
+                print(f": {exc}", end=" ")
             print()
             sys.exit(4)
         except BadCommandUsage as err:
@@ -184,7 +182,7 @@ class CommandLine(dict):
             print("[--rc-file=<configuration file>]", end=" ")
         print("<command> [options] <command argument>...")
         if self.doc:
-            print("\n%s" % self.doc)
+            print(f"\n{self.doc}")
         print(
             """
 Type "%(pgm)s <command> --help" for more information about a specific
@@ -205,15 +203,13 @@ to specify a configuration file. Default to %s.
                 % self.rcfile
             )
         print(
-            """%(pgm)s -h/--help
+            f"""{self.__dict__['pgm']} -h/--help
       display this usage information and exit"""
-            % self.__dict__
         )
         if self.version:
             print(
-                """%(pgm)s -v/--version
+                f"""{self.__dict__['pgm']} -v/--version
       display version configuration and exit"""
-                % self.__dict__
             )
         if self.copyright:
             print("\n", self.copyright)
@@ -262,7 +258,7 @@ class Command(Configuration):
         return cls.description().split(".")[0]
 
     def __init__(self, logger):
-        usage = "%%prog %s %s\n\n%s" % (self.name, self.arguments, self.description())
+        usage = f"%prog {self.name} {self.arguments}\n\n{self.description()}"
         Configuration.__init__(self, usage=usage)
         self.logger = logger
 
@@ -321,42 +317,8 @@ class ListCommandsCommand(Command):
                     print(command)
 
 
-# deprecated stuff #############################################################
-
 _COMMANDS = CommandLine()
 
 DEFAULT_COPYRIGHT = """\
 Copyright (c) 2004-2011 LOGILAB S.A. (Paris, FRANCE), all rights reserved.
 http://www.logilab.fr/ -- mailto:contact@logilab.fr"""
-
-
-@deprecated("use cls.register(cli)")
-def register_commands(commands):
-    """register existing commands"""
-    for command_klass in commands:
-        _COMMANDS.register(command_klass)
-
-
-@deprecated("use args.pop(0)")
-def main_run(args, doc=None, copyright=None, version=None):
-    """command line tool: run command specified by argument list (without the
-    program name). Raise SystemExit with status 0 if everything went fine.
-
-    >>> main_run(sys.argv[1:])
-    """
-    _COMMANDS.doc = doc
-    _COMMANDS.copyright = copyright
-    _COMMANDS.version = version
-    _COMMANDS.run(args)
-
-
-@deprecated("use args.pop(0)")
-def pop_arg(args_list, expected_size_after=None, msg="Missing argument"):
-    """helper function to get and check command line arguments"""
-    try:
-        value = args_list.pop(0)
-    except IndexError:
-        raise BadCommandUsage(msg)
-    if expected_size_after is not None and len(args_list) > expected_size_after:
-        raise BadCommandUsage("too many arguments")
-    return value

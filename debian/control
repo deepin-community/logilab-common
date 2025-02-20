@@ -1,10 +1,10 @@
 Source: logilab-common
 Section: python
 Priority: optional
-Maintainer: Sandro Tosi <morph@debian.org>
-Uploaders: Debian Python Team <team+python@tracker.debian.org>,
+Maintainer: Debian Python Team <team+python@tracker.debian.org>
+Uploaders: Daniel Echeverri <epsilon@debian.org>,
 Build-Depends: debhelper-compat (= 13),
-               dh-python,
+               dh-sequence-python3,
                graphviz <!nodoc>,
                python3,
                python3-mypy-extensions <!nodoc>,
@@ -12,8 +12,8 @@ Build-Depends: debhelper-compat (= 13),
                python3-sphinx <!nodoc>,
                python3-typing-extensions <!nodoc>,
                python3-tz <!nocheck>,
-XS-Python-Version: all
-Standards-Version: 4.5.1
+Standards-Version: 4.6.2.0
+Rules-Requires-Root: no
 Homepage: https://www.logilab.org/project/logilab-common
 Vcs-Git: https://salsa.debian.org/python-team/packages/logilab-common.git
 Vcs-Browser: https://salsa.debian.org/python-team/packages/logilab-common
@@ -22,6 +22,7 @@ Package: python3-logilab-common
 Architecture: all
 Depends: ${misc:Depends},
          ${python3:Depends},
+	 ${sphinxdoc:Depends}
 Conflicts: python-logilab-common,
 Description: useful miscellaneous modules used by Logilab projects (Python3)
  logilab-common is a collection of low-level Python packages and modules,

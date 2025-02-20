@@ -22,13 +22,13 @@ from logilab.common.tasksqueue import Task, PrioritizedTasksQueue, LOW, MEDIUM, 
 
 class TaskTC(TestCase):
     def test_eq(self):
-        self.assertFalse(Task("t1") == Task("t2"))
-        self.assertTrue(Task("t1") == Task("t1"))
+        self.assertNotEqual(Task("t1"), Task("t2"))
+        self.assertEqual(Task("t1"), Task("t1"))
 
     def test_cmp(self):
-        self.assertTrue(Task("t1", LOW) < Task("t2", MEDIUM))
+        self.assertLess(Task("t1", LOW), Task("t2", MEDIUM))
         self.assertFalse(Task("t1", LOW) > Task("t2", MEDIUM))
-        self.assertTrue(Task("t1", HIGH) > Task("t2", MEDIUM))
+        self.assertGreater(Task("t1", HIGH), Task("t2", MEDIUM))
         self.assertFalse(Task("t1", HIGH) < Task("t2", MEDIUM))
 
 

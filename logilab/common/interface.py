@@ -26,7 +26,7 @@ This module requires at least python 2.2
 __docformat__ = "restructuredtext en"
 
 
-class Interface(object):
+class Interface:
     """Base class for interfaces."""
 
     @classmethod

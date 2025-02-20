@@ -18,7 +18,6 @@
 """unit tests utilities for ureports
 """
 
-from __future__ import print_function
 
 import sys
 from io import StringIO
@@ -51,8 +50,8 @@ class WriterTC:
             try:
                 self.assertMultiLineEqual(got, expected)
             except Exception:
-                print("**** using a %s" % buffer.__class__)
-                print("**** got for %s" % test_id)
+                print(f"**** using a {buffer.__class__}")
+                print(f"**** got for {test_id}")
                 print(got)
                 print("**** while expected")
                 print(expected)

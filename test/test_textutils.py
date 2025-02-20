@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # copyright 2003-2011 LOGILAB S.A. (Paris, FRANCE), all rights reserved.
 # contact http://www.logilab.fr/ -- mailto:contact@logilab.fr
 #
@@ -37,7 +36,6 @@ if linesep != "\n":
 
     def ulines(string):
         return LINE_RGX.sub("\n", string)
-
 
 else:
 
@@ -320,7 +318,7 @@ class UnormalizeTC(TestCase):
             ("Bordeaux\u2013Mérignac", "Bordeaux-Merignac"),
         ]
         for input, output in data:
-            yield self.assertEqual, tu.unormalize(input), output
+            self.assertEqual(tu.unormalize(input), output)
 
     def test_unormalize_substitute(self):
         self.assertEqual(tu.unormalize("ab \u8000 cd", substitute="_"), "ab _ cd")

@@ -76,8 +76,6 @@ Exceptions
 .. autoclass:: NoSelectableObject
 """
 
-from __future__ import print_function
-
 
 __docformat__ = "restructuredtext en"
 
@@ -85,7 +83,6 @@ import sys
 import pkgutil
 import types
 import weakref
-import traceback as tb
 from os import listdir, stat
 from os.path import join, isdir, exists
 from typing import Dict, Type, Optional, Union, Sequence
@@ -103,7 +100,6 @@ if sys.version_info >= (3, 8):
 from logilab.common.modutils import modpath_from_file
 from logilab.common.logging_ext import set_log_methods
 from logilab.common.decorators import classproperty
-from logilab.common.deprecation import callable_deprecated
 
 
 # selector base classes and operations ########################################
@@ -215,11 +211,11 @@ class Predicate(object, metaclass=PredicateMetaClass):
 
     def __call__(self, cls, *args, **kwargs):
         return NotImplementedError(
-            "selector %s must implement its logic " "in its __call__ method" % self.__class__
+            f"selector {self.__class__} must implement its logic in its __call__ method"
         )
 
     def __repr__(self):
-        return "<Predicate %s at %x>" % (self.__class__.__name__, id(self))
+        return f"<Predicate {self.__class__.__name__} at {id(self):x}>"
 
 
 class MultiPredicate(Predicate):
@@ -229,7 +225,7 @@ class MultiPredicate(Predicate):
         self.selectors = self.merge_selectors(selectors)
 
     def __str__(self):
-        return "%s(%s)" % (self.__class__.__name__, ",".join(str(s) for s in self.selectors))
+        return f"{self.__class__.__name__}({','.join(str(s) for s in self.selectors)})"
 
     @classmethod
     def merge_selectors(cls, selectors: Sequence[Predicate]) -> List[Predicate]:
@@ -303,7 +299,7 @@ class NotPredicate(Predicate):
         return int(not score)
 
     def __str__(self):
-        return "NOT(%s)" % self.selector
+        return f"NOT({self.selector})"
 
 
 class yes(Predicate):  # pylint: disable=C0103
@@ -324,16 +320,6 @@ class yes(Predicate):  # pylint: disable=C0103
 
 
 # deprecated stuff #############################################################
-
-
-@callable_deprecated("[lgc 0.59] use Registry.objid class method instead")
-def classid(cls):
-    return "%s.%s" % (cls.__module__, cls.__name__)
-
-
-@callable_deprecated("[lgc 0.59] use obj_registries function instead")
-def class_registries(cls, registryname):
-    return obj_registries(cls, registryname)
 
 
 class RegistryException(Exception):
@@ -420,7 +406,7 @@ def _toload_info(
     return _toload
 
 
-class RegistrableObject(object):
+class RegistrableObject:
     """This is the base class for registrable objects which are selected
     according to a context.
 
@@ -465,18 +451,9 @@ class RegistrableInstance(RegistrableObject):
         """Add a __module__ attribute telling the module where the instance was
         created, for automatic registration.
         """
-        module = kwargs.pop("__module__", None)
+        module = kwargs.pop("__module__", None) or getattr(cls, "__module__")
         obj = super(RegistrableInstance, cls).__new__(cls)
-        if module is None:
-            warn(
-                "instantiate {0} with " "__module__=__name__".format(cls.__name__),
-                DeprecationWarning,
-            )
-            # XXX subclass must no override __new__
-            filepath = tb.extract_stack(limit=2)[0][0]
-            obj.__module__ = _modname_from_path(filepath)
-        else:
-            obj.__module__ = module
+        obj.__module__ = module
         return obj
 
     def __init__(self, __module__: Optional[str] = None) -> None:
@@ -554,7 +531,7 @@ class Registry(dict):
     @classmethod
     def objid(cls, obj: Any) -> str:
         """returns a unique identifier for an object stored in the registry"""
-        return "%s.%s" % (obj.__module__, cls.objname(obj))
+        return f"{obj.__module__}.{cls.objname(obj)}"
 
     @classmethod
     def objname(cls, obj: Any) -> str:
@@ -577,14 +554,14 @@ class Registry(dict):
         assert "__abstract__" not in obj.__dict__, obj
         assert obj.__select__, obj
         oid = oid or obj.__regid__
-        assert oid, (
-            "no explicit name supplied to register object %s, " "which has no __regid__ set" % obj
-        )
+        assert (
+            oid
+        ), f"no explicit name supplied to register object {obj}, which has no __regid__ set"
         if clear:
             objects = self[oid] = []
         else:
             objects = self.setdefault(oid, [])
-        assert obj not in objects, "object %s is already registered" % obj
+        assert obj not in objects, f"object {obj} is already registered"
         objects.append(obj)
 
     def register_and_replace(self, obj, replaced):
@@ -595,7 +572,7 @@ class Registry(dict):
         if not isinstance(replaced, str):
             replaced = self.objid(replaced)
         # prevent from misspelling
-        assert obj is not replaced, "replacing an object by itself: %s" % obj
+        assert obj is not replaced, f"replacing an object by itself: {obj}"
         registered_objs = self.get(obj.__regid__, ())
         for index, registered in enumerate(registered_objs):
             if self.objid(registered) == replaced:
@@ -943,9 +920,9 @@ class RegistryStore(dict):
         :meth:`~logilab.common.registry.RegistryStore.register_and_replace` for
         instance).
         """
-        assert isinstance(modname, str), (
-            "modname expected to be a module name (ie string), got %r" % modname
-        )
+        assert isinstance(
+            modname, str
+        ), f"modname expected to be a module name (ie string), got {modname!r}"
         for obj in objects:
             if self.is_registrable(obj) and obj.__module__ == modname and obj not in butclasses:
                 if isinstance(obj, type):
@@ -1021,16 +998,6 @@ class RegistryStore(dict):
         self._loadedmods: Dict[str, Dict[str, type]] = {}
         return filemods
 
-    @callable_deprecated("use register_modnames() instead")
-    def register_objects(self, path: List[str], extrapath: Optional[Any] = None) -> None:
-        """register all objects found walking down <path>"""
-        # load views from each directory in the instance's path
-        # XXX inline init_registration ?
-        filemods = self.init_registration(path, extrapath)
-        for filepath, modname in filemods:
-            self.load_file(filepath, modname)
-        self.initialization_completed()
-
     def register_modnames(self, modnames: List[str]) -> None:
         """register all objects found in <modnames>"""
         self.reset()
@@ -1058,7 +1025,7 @@ class RegistryStore(dict):
             reg.initialization_completed()
 
     def _mdate(self, filepath: str) -> Optional[int]:
-        """ return the modification date of a file path """
+        """return the modification date of a file path"""
         try:
             return stat(filepath)[-2]
         except OSError:
@@ -1088,7 +1055,7 @@ class RegistryStore(dict):
         return False
 
     def load_file(self, filepath: str, modname: str) -> None:
-        """ load registrable objects (if any) from a python file """
+        """load registrable objects (if any) from a python file"""
         if modname in self._loadedmods:
             return
         self._loadedmods[modname] = {}
@@ -1158,7 +1125,7 @@ class RegistryStore(dict):
                 self.load_file(self._toloadmods[objmodname], objmodname)
             return
         # ensure object hasn't been already processed
-        clsid = "%s.%s" % (modname, objectcls.__name__)
+        clsid = f"{modname}.{objectcls.__name__}"
         if clsid in self._loadedmods[modname]:
             return
         self._loadedmods[modname][clsid] = objectcls
@@ -1245,7 +1212,7 @@ TRACED_OIDS = None
 def _trace_selector(cls, selector, args, ret):
     vobj = args[0]
     if TRACED_OIDS == "all" or vobj.__regid__ in TRACED_OIDS:
-        print("%s -> %s for %s(%s)" % (cls, ret, vobj, vobj.__regid__))
+        print(f"{cls} -> {ret} for {vobj}({vobj.__regid__})")
 
 
 def _lltrace(selector):

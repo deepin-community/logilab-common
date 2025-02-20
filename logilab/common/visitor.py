@@ -32,7 +32,7 @@ def no_filter(_: Node) -> int:
 
 
 # Iterators ###################################################################
-class FilteredIterator(object):
+class FilteredIterator:
     def __init__(self, node: Node, list_func: Callable, filter_func: Optional[Any] = None) -> None:
         self._next = [(node, 0)]
         if filter_func is None:
@@ -49,7 +49,7 @@ class FilteredIterator(object):
 
 
 # Base Visitor ################################################################
-class Visitor(object):
+class Visitor:
     def __init__(self, iterator_class, filter_func=None):
         self._iter_class = iterator_class
         self.filter = filter_func
@@ -89,7 +89,7 @@ class Visitor(object):
 
 
 # standard visited mixin ######################################################
-class VisitedMixIn(object):
+class VisitedMixIn:
     """
     Visited interface allow node visitors to use the node
     """
@@ -110,9 +110,9 @@ class VisitedMixIn(object):
     def accept(
         self, visitor: Union[HTMLWriter, TextWriter], *args: Any, **kwargs: Any
     ) -> Optional[Any]:
-        func = getattr(visitor, "visit_%s" % self.get_visit_name())
+        func = getattr(visitor, f"visit_{self.get_visit_name()}")
         return func(self, *args, **kwargs)
 
     def leave(self, visitor, *args, **kwargs):
-        func = getattr(visitor, "leave_%s" % self.get_visit_name())
+        func = getattr(visitor, f"leave_{self.get_visit_name()}")
         return func(self, *args, **kwargs)

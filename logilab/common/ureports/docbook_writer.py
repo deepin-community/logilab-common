@@ -48,25 +48,25 @@ class DocbookWriter(HTMLWriter):
         else:
             tag = "section"
         self.section += 1
-        self.writeln(self._indent("<%s%s>" % (tag, self.handle_attrs(layout))))
+        self.writeln(self._indent(f"<{tag}{self.handle_attrs(layout)}>"))
         self.format_children(layout)
-        self.writeln(self._indent("</%s>" % tag))
+        self.writeln(self._indent(f"</{tag}>"))
         self.section -= 1
 
     def visit_title(self, layout):
         """display a title using <title>"""
-        self.write(self._indent("  <title%s>" % self.handle_attrs(layout)))
+        self.write(self._indent(f"  <title{self.handle_attrs(layout)}>"))
         self.format_children(layout)
         self.writeln("</title>")
 
     def visit_table(self, layout):
         """display a table as html"""
         self.writeln(
-            self._indent("  <table%s><title>%s</title>" % (self.handle_attrs(layout), layout.title))
+            self._indent(f"  <table{self.handle_attrs(layout)}><title>{layout.title}</title>")
         )
-        self.writeln(self._indent('    <tgroup cols="%s">' % layout.cols))
+        self.writeln(self._indent(f'    <tgroup cols="{layout.cols}">'))
         for i in range(layout.cols):
-            self.writeln(self._indent('      <colspec colname="c%s" colwidth="1*"/>' % i))
+            self.writeln(self._indent(f'      <colspec colname="c{i}" colwidth="1*"/>'))
 
         table_content = self.get_table_content(layout)
         # write headers
@@ -87,7 +87,7 @@ class DocbookWriter(HTMLWriter):
             self.writeln(self._indent("        <row>"))
             for j in range(len(row)):
                 cell = row[j] or "&#160;"
-                self.writeln(self._indent("          <entry>%s</entry>" % cell))
+                self.writeln(self._indent(f"          <entry>{cell}</entry>"))
             self.writeln(self._indent("        </row>"))
         self.writeln(self._indent("      </tbody>"))
         self.writeln(self._indent("    </tgroup>"))
@@ -98,14 +98,14 @@ class DocbookWriter(HTMLWriter):
         self.writeln("        <row>")
         for j in range(len(row)):
             cell = row[j] or "&#160;"
-            self.writeln("          <entry>%s</entry>" % cell)
+            self.writeln(f"          <entry>{cell}</entry>")
         self.writeln(self._indent("        </row>"))
 
     def visit_list(self, layout):
         """display a list (using <itemizedlist>)"""
-        self.writeln(self._indent("  <itemizedlist%s>" "" % self.handle_attrs(layout)))
+        self.writeln(self._indent(f"  <itemizedlist{self.handle_attrs(layout)}>"))
         for row in list(self.compute_content(layout)):
-            self.writeln("    <listitem><para>%s</para></listitem>" % row)
+            self.writeln(f"    <listitem><para>{row}</para></listitem>")
         self.writeln(self._indent("  </itemizedlist>"))
 
     def visit_paragraph(self, layout):
@@ -117,14 +117,16 @@ class DocbookWriter(HTMLWriter):
     def visit_span(self, layout):
         """display links (using <p>)"""
         # TODO: translate in docbook
-        self.write("<literal %s>" % self.handle_attrs(layout))
+        self.write(f"<literal {self.handle_attrs(layout)}>")
         self.format_children(layout)
         self.write("</literal>")
 
     def visit_link(self, layout):
         """display links (using <ulink>)"""
         self.write(
-            '<ulink url="%s"%s>%s</ulink>' % (layout.url, self.handle_attrs(layout), layout.label)
+            '<ulink url="{}"{}>{}</ulink>'.format(
+                layout.url, self.handle_attrs(layout), layout.label
+            )
         )
 
     def visit_verbatimtext(self, layout):

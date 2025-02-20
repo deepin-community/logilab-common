@@ -46,7 +46,7 @@ EX_NODE_NOT_FOUND: str = "No such node as '%s'"
 NodeType = Any
 
 
-class Node(object):
+class Node:
     """a basic tree node, characterized by an id"""
 
     def __init__(self, nid: Optional[str] = None) -> None:
@@ -61,7 +61,7 @@ class Node(object):
         return iter(self.children)
 
     def __str__(self, indent=0):
-        s = ["%s%s %s" % (" " * indent, self.__class__.__name__, self.id)]
+        s = [f"{' ' * indent}{self.__class__.__name__} {self.id}"]
         indent += 2
         for child in self.children:
             try:

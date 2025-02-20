@@ -27,7 +27,6 @@
 
 """
 
-from __future__ import print_function
 
 __docformat__ = "restructuredtext en"
 
@@ -43,7 +42,7 @@ import sys
 from pdb import Pdb
 import inspect
 
-from logilab.common.compat import StringIO
+from io import StringIO
 
 try:
     from IPython import PyColorize
@@ -55,7 +54,6 @@ except ImportError:
 
     def colorize_source(source):
         return source
-
 
 else:
 
@@ -70,9 +68,9 @@ else:
         for index, line in enumerate(output.getvalue().splitlines()):
             lineno = index + start_lineno
             if lineno == curlineno:
-                annotated.append("%4s\t->\t%s" % (lineno, line))
+                annotated.append(f"{lineno:>4}\t->\t{line}")
             else:
-                annotated.append("%4s\t\t%s" % (lineno, line))
+                annotated.append(f"{lineno:>4}\t\t{line}")
         return "\n".join(annotated)
 
     def colorize_source(source):
@@ -119,7 +117,7 @@ class Debugger(Pdb):
                 # XXX try..except shouldn't be necessary
                 # read_history_file() can accept None
                 readline.read_history_file(self._histfile)
-            except IOError:
+            except OSError:
                 pass
 
     def start(self):
@@ -173,7 +171,7 @@ class Debugger(Pdb):
         n = len(attr)
         for word in words:
             if word[:n] == attr and word != "__builtins__":
-                matches.append("%s.%s" % (expr, word))
+                matches.append(f"{expr}.{word}")
         return matches
 
     def get_class_members(self, klass):
@@ -196,7 +194,7 @@ class Debugger(Pdb):
                 print(colorize("".join(source), start_lineno, self.curframe.f_lineno))
             except KeyboardInterrupt:
                 pass
-            except IOError:
+            except OSError:
                 Pdb.do_list(self, arg)
         else:
             Pdb.do_list(self, arg)
@@ -207,7 +205,7 @@ class Debugger(Pdb):
         """opens source file corresponding to the current stack level"""
         filename = self.curframe.f_code.co_filename
         lineno = self.curframe.f_lineno
-        cmd = "emacsclient --no-wait +%s %s" % (lineno, filename)
+        cmd = f"emacsclient --no-wait +{lineno} {filename}"
         os.system(cmd)
 
     do_o = do_open

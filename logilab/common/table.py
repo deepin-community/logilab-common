@@ -17,7 +17,6 @@
 # with logilab-common.  If not, see <http://www.gnu.org/licenses/>.
 """Table management module."""
 
-from __future__ import print_function
 from types import CodeType
 from typing import Any, List, Optional, Tuple, Union, Dict, Iterator
 from _io import StringIO
@@ -27,7 +26,7 @@ import re
 __docformat__ = "restructuredtext en"
 
 
-class Table(object):
+class Table:
     """Table defines a data table with column and row names.
     inv::
 
@@ -51,7 +50,7 @@ class Table(object):
             self.create_rows(row_names)
 
     def _next_row_name(self) -> str:
-        return "row%s" % (len(self.row_names) + 1)
+        return f"row{len(self.row_names) + 1}"
 
     def __iter__(self) -> Iterator:
         return iter(self.data)
@@ -114,7 +113,7 @@ class Table(object):
             col_index = self.col_names.index(col_id)
             self.sort_by_column_index(col_index, method)
         except ValueError:
-            raise KeyError("Col (%s) not found in table" % (col_id))
+            raise KeyError(f"Col ({col_id}) not found in table")
 
     def sort_by_column_index(self, col_index: int, method: str = "asc") -> None:
         """Sorts the table 'in-place' according to data stored in col_index
@@ -184,13 +183,13 @@ class Table(object):
         try:
             row_index = self.row_names.index(row_id)
         except ValueError:
-            raise KeyError("Row (%s) not found in table" % (row_id))
+            raise KeyError(f"Row ({row_id}) not found in table")
         else:
             try:
                 col_index = self.col_names.index(col_id)
                 self.data[row_index][col_index] = data
             except ValueError:
-                raise KeyError("Column (%s) not found in table" % (col_id))
+                raise KeyError(f"Column ({col_id}) not found in table")
 
     def set_row(self, row_index: int, row_data: Union[List[float], List[int], List[str]]) -> None:
         """sets the 'row_index' row
@@ -214,7 +213,7 @@ class Table(object):
             row_index = self.row_names.index(row_id)
             self.set_row(row_index, row_data)
         except ValueError:
-            raise KeyError("Row (%s) not found in table" % (row_id))
+            raise KeyError(f"Row ({row_id}) not found in table")
 
     def append_row(
         self, row_data: Union[List[Union[float, str]], List[int]], row_name: Optional[str] = None
@@ -258,7 +257,7 @@ class Table(object):
             row_index = self.row_names.index(row_id)
             self.delete_row(row_index)
         except ValueError:
-            raise KeyError("Row (%s) not found in table" % (row_id))
+            raise KeyError(f"Row ({row_id}) not found in table")
 
     def set_column(self, col_index: int, col_data: Union[List[int], range]) -> None:
         """sets the 'col_index' column
@@ -284,7 +283,7 @@ class Table(object):
             col_index = self.col_names.index(col_id)
             self.set_column(col_index, col_data)
         except ValueError:
-            raise KeyError("Column (%s) not found in table" % (col_id))
+            raise KeyError(f"Column ({col_id}) not found in table")
 
     def append_column(self, col_data: range, col_name: str) -> None:
         """Appends the 'col_index' column
@@ -325,7 +324,7 @@ class Table(object):
             col_index = self.col_names.index(col_id)
             self.delete_column(col_index)
         except ValueError:
-            raise KeyError("Column (%s) not found in table" % (col_id))
+            raise KeyError(f"Column ({col_id}) not found in table")
 
     # The 'getter' part #######################################################
 
@@ -360,7 +359,7 @@ class Table(object):
             try:
                 rows_indice = self.row_names.index(rows_indice)
             except ValueError:
-                raise KeyError("Row (%s) not found in table" % (rows_indice))
+                raise KeyError(f"Row ({rows_indice}) not found in table")
 
         if isinstance(rows_indice, int):
             rows = slice(rows_indice, rows_indice + 1)
@@ -374,7 +373,7 @@ class Table(object):
             try:
                 cols_indice = self.col_names.index(cols_indice)
             except ValueError:
-                raise KeyError("Column (%s) not found in table" % (cols_indice))
+                raise KeyError(f"Column ({cols_indice}) not found in table")
 
         if isinstance(cols_indice, int):
             cols = slice(cols_indice, cols_indice + 1)
@@ -409,12 +408,12 @@ class Table(object):
         try:
             row_index = self.row_names.index(row_id)
         except ValueError:
-            raise KeyError("Row (%s) not found in table" % (row_id))
+            raise KeyError(f"Row ({row_id}) not found in table")
         else:
             try:
                 col_index = self.col_names.index(col_id)
             except ValueError:
-                raise KeyError("Column (%s) not found in table" % (col_id))
+                raise KeyError(f"Column ({col_id}) not found in table")
         return self.data[row_index][col_index]
 
     def get_row_by_id(self, row_id):
@@ -422,7 +421,7 @@ class Table(object):
         try:
             row_index = self.row_names.index(row_id)
         except ValueError:
-            raise KeyError("Row (%s) not found in table" % (row_id))
+            raise KeyError(f"Row ({row_id}) not found in table")
         return self.data[row_index]
 
     def get_column_by_id(self, col_id, distinct=False):
@@ -430,7 +429,7 @@ class Table(object):
         try:
             col_index = self.col_names.index(col_id)
         except ValueError:
-            raise KeyError("Column (%s) not found in table" % (col_id))
+            raise KeyError(f"Column ({col_id}) not found in table")
         return self.get_column(col_index, distinct)
 
     def get_columns(self) -> List[List[int]]:
@@ -517,7 +516,6 @@ class TableStyle:
     """Defines a table's style"""
 
     def __init__(self, table: Table) -> None:
-
         self._table = table
         self.size = dict([(col_name, "1*") for col_name in table.col_names])
         # __row_column__ is a special key to define the first column which
@@ -666,7 +664,7 @@ class TableStyleSheet:
             self.instructions.append(compile("\n".join(source_code), "table.py", "exec"))
             self.rules.append(rule)
         except SyntaxError:
-            print("Bad Stylesheet Rule : %s [skipped]" % rule)
+            print(f"Bad Stylesheet Rule : {rule} [skipped]")
 
     def add_rowsum_rule(
         self, dest_cell: Tuple[int, int], row_index: int, start_col: int, end_col: int
@@ -698,7 +696,7 @@ class TableStyleSheet:
         """
         cell_list = ["%d_%d" % (row_index, index) for index in range(start_col, end_col + 1)]
         num = end_col - start_col + 1
-        rule = "%d_%d=" % dest_cell + "(" + "+".join(cell_list) + ")/%f" % num
+        rule = "%d_%d=" % dest_cell + "(" + "+".join(cell_list) + f")/{num:f}"
         self.add_rule(rule)
 
     def add_colsum_rule(
@@ -731,7 +729,7 @@ class TableStyleSheet:
         """
         cell_list = ["%d_%d" % (index, col_index) for index in range(start_row, end_row + 1)]
         num = end_row - start_row + 1
-        rule = "%d_%d=" % dest_cell + "(" + "+".join(cell_list) + ")/%f" % num
+        rule = "%d_%d=" % dest_cell + "(" + "+".join(cell_list) + f")/{num:f}"
         self.add_rule(rule)
 
 
@@ -832,10 +830,10 @@ class DocbookRenderer(TableCellRenderer):
             align_on = self.properties["alignment"]
             alignment = table_style.get_alignment_by_index(col_index)
             if align_on:
-                return "<entry align='%s'>%s</entry>\n" % (alignment, cell_content)
+                return f"<entry align='{alignment}'>{cell_content}</entry>\n"
         except KeyError:
             # KeyError <=> Default alignment
-            return "<entry>%s</entry>\n" % cell_content
+            return f"<entry>{cell_content}</entry>\n"
 
         # XXX really?
         return ""
@@ -912,7 +910,7 @@ class DocbookTableWriter(TableWriter):
 
     def write_table(self, title: str = "") -> None:
         """Writes the table"""
-        self._stream.write("<table>\n<title>%s></title>\n" % (title))
+        self._stream.write(f"<table>\n<title>{title}></title>\n")
         self._stream.write(
             '<tgroup cols="%d" align="left" colsep="1" rowsep="1">\n'
             % (len(self._table.col_names) + 1)

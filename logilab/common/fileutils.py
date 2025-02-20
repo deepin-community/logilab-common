@@ -24,7 +24,6 @@ write_open_mode, ensure_fs_mode, export
 :sort: path manipulation, file manipulation
 """
 
-from __future__ import print_function
 
 __docformat__ = "restructuredtext en"
 
@@ -37,11 +36,10 @@ from os.path import abspath
 from os import sep, mkdir, remove, listdir, stat, chmod, walk
 from stat import ST_MODE, S_IWRITE
 from typing import Optional, List, Tuple
+from io import FileIO
 from _io import TextIOWrapper
 
 from logilab.common import STD_BLACKLIST as BASE_BLACKLIST, IGNORED_EXTENSIONS
-from logilab.common.deprecation import callable_deprecated
-from logilab.common.compat import FileIO
 
 
 def first_level_directory(path: str) -> str:
@@ -246,36 +244,6 @@ def relative_path(from_file, to_file):
             result.append("..")
     result += to_parts
     return sep.join(result)
-
-
-def norm_read(path):
-    """Return the content of the file with normalized line feeds.
-
-    :type path: str
-    :param path: path to the file to read
-
-    :rtype: str
-    :return: the content of the file with normalized line feeds
-    """
-    return open(path, "U").read()
-
-
-norm_read = callable_deprecated("use \"open(path, 'U').read()\"")(norm_read)
-
-
-def norm_open(path):
-    """Return a stream for a file with content with normalized line feeds.
-
-    :type path: str
-    :param path: path to the file to open
-
-    :rtype: file or StringIO
-    :return: the opened file with normalized line feeds
-    """
-    return open(path, "U")
-
-
-norm_open = callable_deprecated("use \"open(path, 'U')\"")(norm_open)
 
 
 def lines(path: str, comments: Optional[str] = None) -> List[str]:

@@ -17,13 +17,13 @@
 # with logilab-common.  If not, see <http://www.gnu.org/licenses/>.
 """unit tests for logilab.common.shellutils"""
 
+from io import StringIO
 from os.path import join, dirname, abspath
 from unittest.mock import patch
 
 from logilab.common.testlib import TestCase, unittest_main
 
 from logilab.common.shellutils import globfind, find, ProgressBar, RawInput
-from logilab.common.compat import StringIO
 
 
 DATA_DIR = join(dirname(abspath(__file__)), "data", "find_test")
@@ -34,84 +34,76 @@ class FindTC(TestCase):
         files = set(find(DATA_DIR, ".py"))
         self.assertSetEqual(
             files,
-            set(
-                [
-                    join(DATA_DIR, f)
-                    for f in [
-                        "__init__.py",
-                        "module.py",
-                        "module2.py",
-                        "noendingnewline.py",
-                        "nonregr.py",
-                        join("sub", "momo.py"),
-                    ]
+            {
+                join(DATA_DIR, f)
+                for f in [
+                    "__init__.py",
+                    "module.py",
+                    "module2.py",
+                    "noendingnewline.py",
+                    "nonregr.py",
+                    join("sub", "momo.py"),
                 ]
-            ),
+            },
         )
         files = set(find(DATA_DIR, (".py",), blacklist=("sub",)))
         self.assertSetEqual(
             files,
-            set(
-                [
-                    join(DATA_DIR, f)
-                    for f in [
-                        "__init__.py",
-                        "module.py",
-                        "module2.py",
-                        "noendingnewline.py",
-                        "nonregr.py",
-                    ]
+            {
+                join(DATA_DIR, f)
+                for f in [
+                    "__init__.py",
+                    "module.py",
+                    "module2.py",
+                    "noendingnewline.py",
+                    "nonregr.py",
                 ]
-            ),
+            },
         )
 
     def test_exclude(self):
         files = set(find(DATA_DIR, (".py", ".pyc"), exclude=True))
         self.assertSetEqual(
             files,
-            set(
-                [
-                    join(DATA_DIR, f)
-                    for f in [
-                        "foo.txt",
-                        "newlines.txt",
-                        "normal_file.txt",
-                        "test.ini",
-                        "test1.msg",
-                        "test2.msg",
-                        "spam.txt",
-                        join("sub", "doc.txt"),
-                        "write_protected_file.txt",
-                    ]
+            {
+                join(DATA_DIR, f)
+                for f in [
+                    "foo.txt",
+                    "newlines.txt",
+                    "normal_file.txt",
+                    "test.ini",
+                    "test1.msg",
+                    "test2.msg",
+                    "spam.txt",
+                    join("sub", "doc.txt"),
+                    "write_protected_file.txt",
                 ]
-            ),
+            },
         )
 
     def test_globfind(self):
         files = set(globfind(DATA_DIR, "*.py"))
         self.assertSetEqual(
             files,
-            set(
-                [
-                    join(DATA_DIR, f)
-                    for f in [
-                        "__init__.py",
-                        "module.py",
-                        "module2.py",
-                        "noendingnewline.py",
-                        "nonregr.py",
-                        join("sub", "momo.py"),
-                    ]
+            {
+                join(DATA_DIR, f)
+                for f in [
+                    "__init__.py",
+                    "module.py",
+                    "module2.py",
+                    "noendingnewline.py",
+                    "nonregr.py",
+                    join("sub", "momo.py"),
                 ]
-            ),
+            },
         )
         files = set(globfind(DATA_DIR, "mo*.py"))
         self.assertSetEqual(
             files,
-            set([join(DATA_DIR, f) for f in ["module.py", "module2.py", join("sub", "momo.py")]]),
+            {join(DATA_DIR, f) for f in ["module.py", "module2.py", join("sub", "momo.py")]},
         )
         files = set(globfind(DATA_DIR, "mo*.py", blacklist=("sub",)))
-        self.assertSetEqual(files, set([join(DATA_DIR, f) for f in ["module.py", "module2.py"]]))
+        self.assertSetEqual(files, {join(DATA_DIR, f) for f in ["module.py", "module2.py"]})
 
 
 class ProgressBarTC(TestCase):

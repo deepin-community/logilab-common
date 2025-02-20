@@ -1,7 +1,5 @@
-# -*- coding: Latin-1 -*-
 """test module for astng
 """
-from __future__ import print_function
 
 from logilab.common import modutils, Execute as spawn
 from logilab.common.astutils import *

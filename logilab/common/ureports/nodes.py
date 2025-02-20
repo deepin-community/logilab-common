@@ -63,7 +63,6 @@ class BaseLayout(BaseComponent):
         ] = (),
         **kwargs: Any,
     ) -> None:
-
         super(BaseLayout, self).__init__(**kwargs)
 
         for child in children:

@@ -31,7 +31,7 @@ class IFace3(Interface):
     pass
 
 
-class A(object):
+class A:
     __implements__ = (IFace1,)
 
 
@@ -51,7 +51,7 @@ class D(C1):
     __implements__ = ()
 
 
-class Z(object):
+class Z:
     pass
 
 
@@ -67,15 +67,15 @@ class ExtendTC(TestCase):
         extend(A, IFace2)
         self.assertEqual(A.__implements__, (IFace1, IFace2))
         self.assertEqual(B.__implements__, (IFace1, IFace2))
-        self.assertTrue(B.__implements__ is A.__implements__)
+        self.assertIs(B.__implements__, A.__implements__)
         self.assertEqual(C1.__implements__, [IFace1, IFace3, IFace2])
         self.assertEqual(C2.__implements__, (IFace1, IFace2))
-        self.assertTrue(C2.__implements__ is c2impl)
+        self.assertIs(C2.__implements__, c2impl)
         self.assertEqual(D.__implements__, (IFace2,))
 
     def test_already_impl(self):
         extend(A, IFace1)
-        self.assertTrue(A.__implements__ is aimpl)
+        self.assertIs(A.__implements__, aimpl)
 
     def test_no_impl(self):
         extend(Z, IFace1)
@@ -83,14 +83,14 @@ class ExtendTC(TestCase):
 
     def test_notimpl_explicit(self):
         extend(C1, IFace3)
-        self.assertTrue(C1.__implements__ is c1impl)
-        self.assertTrue(D.__implements__ is dimpl)
+        self.assertIs(C1.__implements__, c1impl)
+        self.assertIs(D.__implements__, dimpl)
 
     def test_nonregr_implements_baseinterface(self):
         class SubIFace(IFace1):
             pass
 
-        class X(object):
+        class X:
             __implements__ = (SubIFace,)
 
         self.assertTrue(SubIFace.is_implemented_by(X))

@@ -30,7 +30,7 @@ class MyError(MyException):
     pass
 
 
-class AbstractClass(object):
+class AbstractClass:
     def to_override(self, whatever):
         raise NotImplementedError()
 
@@ -78,7 +78,7 @@ c = b / 2
 c = b // 2
 c = b - 2
 c = b % 2
-c = b ** 2
+c = b**2
 c = b << 2
 c = b >> 2
 c = ~b

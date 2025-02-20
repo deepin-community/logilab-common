@@ -58,16 +58,13 @@ except ImportError:
     # cf https://github.com/python/cpython/blob/3.7/Lib/re.py#L264
     Pattern = type(re.sre_compile.compile("", 0))  # type: ignore
     Match = type(re.sre_compile.compile("", 0).match(""))  # type: ignore
-from warnings import warn
 from unicodedata import normalize as _uninormalize
-from typing import Any, Optional, Tuple, List, Callable, Dict, Union
+from typing import Optional, Tuple, List, Callable, Dict, Union
 
 try:
     from os import linesep
 except ImportError:
     linesep = "\n"  # gae
-
-from logilab.common.deprecation import callable_deprecated
 
 MANUAL_UNICODE_MAP = {
     "\xa1": "!",  # INVERTED EXCLAMATION MARK
@@ -89,9 +86,7 @@ MANUAL_UNICODE_MAP = {
 }
 
 
-def unormalize(
-    ustring: str, ignorenonascii: Optional[Any] = None, substitute: Optional[str] = None
-) -> str:
+def unormalize(ustring: str, substitute: Optional[str] = None) -> str:
     """replace diacritical characters with their corresponding ascii characters
 
     Convert the unicode string to its long normalized form (unicode character
@@ -105,22 +100,13 @@ def unormalize(
     :see: Another project about ASCII transliterations of Unicode text
           http://pypi.python.org/pypi/Unidecode
     """
-    # backward compatibility, ignorenonascii was a boolean
-    if ignorenonascii is not None:
-        warn(
-            "ignorenonascii is deprecated, use substitute named parameter instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if ignorenonascii:
-            substitute = ""
     res = []
     for letter in ustring[:]:
         try:
             replacement = MANUAL_UNICODE_MAP[letter]
         except KeyError:
             replacement = _uninormalize("NFKD", letter)[0]
-            if ord(replacement) >= 2 ** 7:
+            if ord(replacement) >= 2**7:
                 if substitute is None:
                     raise ValueError("can't deal with non-ascii based characters")
                 replacement = substitute
@@ -178,7 +164,7 @@ def normalize_text(text: str, line_len: int = 80, indent: str = "", rest: bool =
     result = []
     for text in _BLANKLINES_RGX.split(text):
         result.append(normp(text, line_len, indent))
-    return ("%s%s%s" % (linesep, indent, linesep)).join(result)
+    return (f"{linesep}{indent}{linesep}").join(result)
 
 
 def normalize_paragraph(text: str, line_len: int = 80, indent: str = "") -> str:
@@ -293,9 +279,6 @@ def splitstrip(string: str, sep: str = ",") -> List[str]:
     return [word.strip() for word in string.split(sep) if word.strip()]
 
 
-get_csv = callable_deprecated("get_csv is deprecated, use splitstrip")(splitstrip)
-
-
 def split_url_or_path(url_or_path):
     """return the latest component of a string containing either an url of the
     form <scheme>://<path> or a local file system path
@@ -347,9 +330,9 @@ _VALIDATION_RE = re.compile(r"^((%s)(%s))*(%s)?$" % (__VALUE_URE, __UNITS_URE, _
 BYTE_UNITS = {
     "b": 1,
     "kb": 1024,
-    "mb": 1024 ** 2,
-    "gb": 1024 ** 3,
-    "tb": 1024 ** 4,
+    "mb": 1024**2,
+    "gb": 1024**3,
+    "tb": 1024**4,
 }
 
 TIME_UNITS = {
@@ -391,7 +374,7 @@ def apply_units(
         inter = final
     fstring = _BLANK_RE.sub("", string)
     if not (fstring and _VALIDATION_RE.match(fstring)):
-        raise ValueError("Invalid unit string: %r." % string)
+        raise ValueError(f"Invalid unit string: {string!r}.")
     values = []
     for match in value_reg.finditer(fstring):
         dic = match.groupdict()
@@ -401,7 +384,7 @@ def apply_units(
             try:
                 value *= units[unit.lower()]
             except KeyError:
-                raise ValueError("invalid unit %s. valid units are %s" % (unit, list(units.keys())))
+                raise ValueError(f"invalid unit {unit}. valid units are {list(units.keys())}")
         values.append(value)
     return final(sum(values))
 
@@ -489,6 +472,14 @@ ANSI_COLORS = {
     "magenta": "35",
     "cyan": "36",
     "white": "37",
+    "background_black": "40",
+    "background_red": "41",
+    "background_green": "42",
+    "background_yellow": "43",
+    "background_blue": "44",
+    "background_magenta": "45",
+    "background_cyan": "46",
+    "background_white": "47",
 }
 
 
@@ -552,7 +543,7 @@ def colorize_ansi(msg: str, color: Optional[str] = None, style: Optional[str] = 
     escape_code = _get_ansi_code(color, style)
     # If invalid (or unknown) color, don't wrap msg with ansi codes
     if escape_code:
-        return "%s%s%s" % (escape_code, msg, ANSI_RESET)
+        return f"{escape_code}{msg}{ANSI_RESET}"
     return msg
 
 
